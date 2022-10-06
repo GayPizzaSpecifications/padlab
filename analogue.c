@@ -3,7 +3,7 @@
 #include <stdio.h>
 #include <stdbool.h>
 
-#define CAPTION "Analogue"
+#define CAPTION "PadLab"
 #define WINDOW_WIDTH  512
 #define WINDOW_HEIGHT 288
 

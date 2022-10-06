@@ -1,7 +1,7 @@
 cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
-project(analogue C)
+project(padlab C)
 set(CMAKE_C_STANDARD 11)
-set(TARGET analogue)
+set(TARGET padlab)
 set(SOURCES
 	maths.c maths.h
 	analogue.c)
