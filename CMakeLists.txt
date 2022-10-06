@@ -1,13 +1,14 @@
-cmake_minimum_required(VERSION 3.1)
-set(PROJECT analogue)
-set(SOURCES analogue.c)
-
-project(${PROJECT} C)
+cmake_minimum_required(VERSION 3.1 FATAL_ERROR)
+project(analogue C)
 set(CMAKE_C_STANDARD 11)
-find_package(SDL2 REQUIRED)
-add_definitions(${SDL2_CFLAGS})
-include_directories(${SDL2_INCLUDE_DIRS})
-set(LIBRARIES ${SDL2_LIBRARIES} m)
+set(TARGET analogue)
+set(SOURCES
+	maths.c maths.h
+	analogue.c)
 
-add_executable(${PROJECT} ${SOURCES})
-target_link_libraries(${PROJECT} ${LIBRARIES})
+find_package(SDL2 REQUIRED)
+
+add_executable(${TARGET} ${SOURCES})
+target_link_libraries(${TARGET} SDL2::SDL2 m)
+target_compile_options(${TARGET} PRIVATE
+	-Wall -Wextra -pedantic -Wno-unused-parameter)
