@@ -1,4 +1,5 @@
 #include "maths.h"
+#include "draw.h"
 #include <SDL.h>
 #include <stdio.h>
 #include <stdbool.h>
@@ -10,7 +11,6 @@
 #define DISPLAY_SCALE  0.8889
 
 SDL_Window* window = NULL;
-SDL_Renderer* rend = NULL;
 SDL_JoystickID joyid = -1;
 SDL_GameController* pad = NULL;
 
@@ -24,26 +24,6 @@ bool UseGamepad(int a_joyid)
 		return true;
 	}
 	return false;
-}
-
-void DrawCircle(int x, int y, int r, int steps)
-{
-	double stepsz = (TAU) / steps;
-	int lastx = r;
-	int lasty = 0;
-	for (int i = 0; i <= steps; ++i)
-	{
-		const double mag = (double)r;
-		int ofsx = (int)round(cos(stepsz * i) * mag);
-		int ofsy = (int)round(sin(stepsz * i) * mag);
-
-		SDL_RenderDrawLine(rend,
-			x + lastx, y + lasty,
-			x + ofsx, y + ofsy);
-		
-		lastx = ofsx;
-		lasty = ofsy;
-	}
 }
 
 vector RadialDeadzone(vector v, double min, double max)
@@ -145,28 +125,28 @@ void DrawAnalogue(const SDL_Rect* win, StickState* p)
 		p->recalc = false;
 	}
 
-	SDL_Rect rect;
 	double size = (double)(win->w > win->h ? win->h : win->w) * DISPLAY_SCALE;
 
 	// range rect
-	SDL_SetRenderDrawColor(rend, 0x3F, 0x3F, 0x3F, 0xFF);
-	rect.w = rect.h = (int)round(size);
-	rect.x = win->x + (win->w - rect.w) / 2;
-	rect.y = win->y + (win->h - rect.h) / 2;
-	SDL_RenderDrawRect(rend, &rect);
+	SetDrawColour(0x3F3F3FFF);
+	const int rectSz = (int)round(size);
+	DrawRect(
+		win->x + (win->w - rectSz) / 2,
+		win->y + (win->h - rectSz) / 2,
+		rectSz, rectSz);
 
 	const int ox = win->x + win->w / 2;
 	const int oy = win->y + win->h / 2;
 
 	// acceleration curve
-	SDL_SetRenderDrawColor(rend, 0x4F, 0x4F, 0x4F, 0xFF);
+	SetDrawColour(0x4F4F4FFF);
 	const int accelsamp = (int)(sqrt(size) * 4.20);
 	const double step = 1.0 / (double)accelsamp;
 	double y1 = AccelCurve(0.0, p->accelpow);
 	for (int i = 1; i <= accelsamp; ++i)
 	{
 		double y2 = AccelCurve(step * i, p->accelpow);
-		SDL_RenderDrawLine(rend,
+		DrawLine(
 			win->x + (int)(step * (i - 1) * size) + (win->w - (int)round(size)) / 2,
 			win->y + (int)((1.0 - y1) * size) + (win->h - (int)round(size)) / 2,
 			win->x + (int)(step * i * size) + (win->w - (int)round(size)) / 2,
@@ -175,61 +155,53 @@ void DrawAnalogue(const SDL_Rect* win, StickState* p)
 	}
 	const int tickerx = (int)((p->preaccel - 0.5) * size);
 	const int tickery = (int)((0.5 - p->postacel) * size);
-	SDL_SetRenderDrawColor(rend, 0x2F, 0x3F, 0x1F, 0xFF);
-	SDL_RenderDrawLine(rend,
+	SetDrawColour(0x2F3F1FFF);
+	DrawLine(
 		ox + tickerx,
 		win->y + (win->h - (int)round(size)) / 2,
 		ox + tickerx,
 		win->y + (win->h + (int)round(size)) / 2);
-	SDL_SetRenderDrawColor(rend, 0x2F, 0x5F, 0x2F, 0xFF);
-	SDL_RenderDrawLine(rend,
+	SetDrawColour(0x2F5F2FFF);
+	DrawLine(
 		win->x + (win->w - (int)round(size)) / 2,
 		oy + tickery,
 		win->x + (win->w + (int)round(size)) / 2,
 		oy + tickery);
 
 	// guide circle
-	SDL_SetRenderDrawColor(rend, 0x4F, 0x4F, 0x4F, 0xFF);
-	DrawCircle(
-		ox, oy,
-		(int)round(size) / 2, (int)(sqrt(size) * 8.0));
+	SetDrawColour(0x4F4F4FFF);
+	DrawCircle(ox, oy, (int)round(size) / 2);
 
-	SDL_SetRenderDrawColor(rend, 0x3F, 0x3F, 0x3F, 0xFF);
-	DrawCircle(
-		ox, oy,
-		(int)round(p->deadzone * size) / 2, (int)(sqrt(size) * 2.0));
+	SetDrawColour(0x3F3F3FFF);
+	DrawCircle(ox, oy, (int)round(p->deadzone * size) / 2);
 
 	// 0,0 line axis'
-	SDL_SetRenderDrawColor(rend, 0x2F, 0x2F, 0x2F, 0xFF);
-	SDL_RenderDrawLine(rend,
-		win->x,
-		oy,
-		win->x + win->w,
-		oy);
-	SDL_RenderDrawLine(rend,
-		ox,
-		win->y,
-		ox,
-		win->y + win->h);
+	SetDrawColour(0x2F2F2FFF);
+	DrawLine(
+		win->x, oy,
+		win->x + win->w, oy);
+	DrawLine(
+		ox, win->y,
+		ox, win->y + win->h);
 
 	// compensated position
-	SDL_SetRenderDrawColor(rend, 0x1F, 0xFF, 0x1F, 0xFF);
-	DrawCircle(
+	SetDrawColour(0x1FFF1FFF);
+	DrawCircleSteps(
 		ox + (int)round(p->compos.x * size / 2.0),
 		oy + (int)round(p->compos.y * size / 2.0),
 		8, 16);
-	SDL_RenderDrawPoint(rend,
+	DrawPoint(
 		ox + (int)round(p->compos.x * size / 2.0),
 		oy + (int)round(p->compos.y * size / 2.0));
 
 	// raw position
-	SDL_SetRenderDrawColor(rend, 0xFF, 0xFF, 0xFF, 0xFF);
-	SDL_RenderDrawLine(rend,
+	SetDrawColour(0xFFFFFFFF);
+	DrawLine(
 		ox + (int)round(p->rawpos.x * size / 2.0) - 4,
 		oy + (int)round(p->rawpos.y * size / 2.0),
 		ox + (int)round(p->rawpos.x * size / 2.0) + 4,
 		oy + (int)round(p->rawpos.y * size / 2.0));
-	SDL_RenderDrawLine(rend,
+	DrawLine(
 		ox + (int)round(p->rawpos.x * size / 2.0),
 		oy + (int)round(p->rawpos.y * size / 2.0) - 4,
 		ox + (int)round(p->rawpos.x * size / 2.0),
@@ -244,37 +216,32 @@ void DrawDigital(const SDL_Rect* win, StickState* p)
 		p->recalc = false;
 	}
 
-	SDL_Rect rect;
 	const double size = (double)(win->w > win->h ? win->h : win->w) * DISPLAY_SCALE;
 
 	// range rect
-	SDL_SetRenderDrawColor(rend, 0x3F, 0x3F, 0x3F, 0xFF);
-	rect.w = rect.h = (int)round(size);
-	rect.x = win->x + (win->w - rect.w) / 2;
-	rect.y = win->y + (win->h - rect.h) / 2;
-	SDL_RenderDrawRect(rend, &rect);
+	SetDrawColour(0x3F3F3FFF);
+	const int rectSz = (int)round(size);
+	DrawRect(
+		win->x + (win->w - rectSz) / 2,
+		win->y + (win->h - rectSz) / 2,
+		rectSz, rectSz);
 
 	// window centre
 	const int ox = win->x + win->w / 2;
 	const int oy = win->y + win->h / 2;
 
 	// guide circle
-	SDL_SetRenderDrawColor(rend, 0x4F, 0x4F, 0x4F, 0xFF);
-	DrawCircle(ox, oy,
-		(int)round(size) / 2, (int)(sqrt(size) * 8.0));
+	SetDrawColour(0x4F4F4FFF);
+	DrawCircle(ox, oy, (int)round(size) / 2);
 
 	// 0,0 line axis'
-	SDL_SetRenderDrawColor(rend, 0x2F, 0x2F, 0x2F, 0xFF);
-	SDL_RenderDrawLine(rend,
-		win->x,
-		oy,
-		win->x + win->w,
-		oy);
-	SDL_RenderDrawLine(rend,
-		ox,
-		win->y,
-		ox,
-		win->y + win->h);
+	SetDrawColour(0x2F2F2FFF);
+	DrawLine(
+		win->x, oy,
+		win->x + win->w, oy);
+	DrawLine(
+		ox, win->y,
+		ox, win->y + win->h);
 
 	// calcuate points for the zone previews
 	const double outerinvmag = 1.0 / sqrt(1.0 + p->digiangle * p->digiangle);
@@ -283,47 +250,47 @@ void DrawDigital(const SDL_Rect* win, StickState* p)
 	const int innh = (int)round(p->digideadzone * size / 2.0);
 	const int innq = (int)round(p->digideadzone * size / 2.0 * p->digiangle);
 
-	SDL_SetRenderDrawColor(rend, 0x3F, 0x3F, 0x3F, 0xFF);
+	SetDrawColour(0x3F3F3FFF);
 
 	// angles preview
-	SDL_RenderDrawLine(rend, ox - outq, oy - outh, ox - innq, oy - innh);
-	SDL_RenderDrawLine(rend, ox + outq, oy - outh, ox + innq, oy - innh);
-	SDL_RenderDrawLine(rend, ox + outh, oy - outq, ox + innh, oy - innq);
-	SDL_RenderDrawLine(rend, ox + outh, oy + outq, ox + innh, oy + innq);
-	SDL_RenderDrawLine(rend, ox + outq, oy + outh, ox + innq, oy + innh);
-	SDL_RenderDrawLine(rend, ox - outq, oy + outh, ox - innq, oy + innh);
-	SDL_RenderDrawLine(rend, ox - outh, oy + outq, ox - innh, oy + innq);
-	SDL_RenderDrawLine(rend, ox - outh, oy - outq, ox - innh, oy - innq);
+	DrawLine(ox - outq, oy - outh, ox - innq, oy - innh);
+	DrawLine(ox + outq, oy - outh, ox + innq, oy - innh);
+	DrawLine(ox + outh, oy - outq, ox + innh, oy - innq);
+	DrawLine(ox + outh, oy + outq, ox + innh, oy + innq);
+	DrawLine(ox + outq, oy + outh, ox + innq, oy + innh);
+	DrawLine(ox - outq, oy + outh, ox - innq, oy + innh);
+	DrawLine(ox - outh, oy + outq, ox - innh, oy + innq);
+	DrawLine(ox - outh, oy - outq, ox - innh, oy - innq);
 
 	// deadzone octagon
-	SDL_RenderDrawLine(rend, ox - innq, oy - innh, ox + innq, oy - innh);
-	SDL_RenderDrawLine(rend, ox + innq, oy - innh, ox + innh, oy - innq);
-	SDL_RenderDrawLine(rend, ox + innh, oy - innq, ox + innh, oy - innq);
-	SDL_RenderDrawLine(rend, ox + innh, oy - innq, ox + innh, oy + innq);
-	SDL_RenderDrawLine(rend, ox + innh, oy + innq, ox + innq, oy + innh);
-	SDL_RenderDrawLine(rend, ox + innq, oy + innh, ox - innq, oy + innh);
-	SDL_RenderDrawLine(rend, ox - innq, oy + innh, ox - innh, oy + innq);
-	SDL_RenderDrawLine(rend, ox - innh, oy + innq, ox - innh, oy - innq);
-	SDL_RenderDrawLine(rend, ox - innh, oy - innq, ox - innq, oy - innh);
+	DrawLine(ox - innq, oy - innh, ox + innq, oy - innh);
+	DrawLine(ox + innq, oy - innh, ox + innh, oy - innq);
+	DrawLine(ox + innh, oy - innq, ox + innh, oy - innq);
+	DrawLine(ox + innh, oy - innq, ox + innh, oy + innq);
+	DrawLine(ox + innh, oy + innq, ox + innq, oy + innh);
+	DrawLine(ox + innq, oy + innh, ox - innq, oy + innh);
+	DrawLine(ox - innq, oy + innh, ox - innh, oy + innq);
+	DrawLine(ox - innh, oy + innq, ox - innh, oy - innq);
+	DrawLine(ox - innh, oy - innq, ox - innq, oy - innh);
 
 	// compensated position
-	SDL_SetRenderDrawColor(rend, 0x1F, 0xFF, 0x1F, 0xFF);
-	DrawCircle(
+	SetDrawColour(0x1FFF1FFF);
+	DrawCircleSteps(
 		ox + (int)round(p->compos.x * size / 2.0),
 		oy + (int)round(p->compos.y * size / 2.0),
 		8, 16);
-	SDL_RenderDrawPoint(rend,
+	DrawPoint(
 		ox + (int)round(p->compos.x * size / 2.0),
 		oy + (int)round(p->compos.y * size / 2.0));
 
 	// raw position
-	SDL_SetRenderDrawColor(rend, 0xFF, 0xFF, 0xFF, 0xFF);
-	SDL_RenderDrawLine(rend,
+	SetDrawColour(0xFFFFFFFF);
+	DrawLine(
 		ox + (int)round(p->rawpos.x * size / 2.0) - 4,
 		oy + (int)round(p->rawpos.y * size / 2.0),
 		ox + (int)round(p->rawpos.x * size / 2.0) + 4,
 		oy + (int)round(p->rawpos.y * size / 2.0));
-	SDL_RenderDrawLine(rend,
+	DrawLine(
 		ox + (int)round(p->rawpos.x * size / 2.0),
 		oy + (int)round(p->rawpos.y * size / 2.0) - 4,
 		ox + (int)round(p->rawpos.x * size / 2.0),
@@ -533,8 +500,8 @@ int main(int argc, char** argv)
 		if (repaint)
 		{
 			// background
-			SDL_SetRenderDrawColor(rend, 0x1F, 0x1F, 0x1F, 0xFF);
-			SDL_RenderClear(rend);
+			SetDrawColour(0x1F1F1FFF);
+			DrawClear();
 
 			const int hrw = rw / 2;
 			DrawDigital(&(SDL_Rect){ 0, 0, hrw, rh }, &stickl);
@@ -543,17 +510,16 @@ int main(int argc, char** argv)
 			// test player thingo
 			if (showavatar)
 			{
-				SDL_Rect rect;
-
 				plrpos = VecAdd(plrpos, VecScale(stickl.compos, framedelta * 0.5));
 				plrpos.x = pfmod(plrpos.x, rw);
 				plrpos.y = pfmod(plrpos.y, rh);
 
-				SDL_SetRenderDrawColor(rend, 0xFF, 0x00, 0x00, 0xFF);
-				rect.w = rect.h = 32;
-				rect.x = (int)plrpos.x - rect.w / 2;
-				rect.y = (int)plrpos.y - rect.h / 2;
-				SDL_RenderDrawRect(rend, &rect);
+				SetDrawColour(0xFF0000FF);
+				const int plrSz = 32;
+				DrawRect(
+					(int)plrpos.x - plrSz / 2,
+					(int)plrpos.y - plrSz / 2,
+					plrSz, plrSz);
 			}
 
 			SDL_RenderPresent(rend);

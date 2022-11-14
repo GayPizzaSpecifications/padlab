@@ -4,6 +4,7 @@ set(CMAKE_C_STANDARD 99)
 set(TARGET padlab)
 set(SOURCES
 	maths.c maths.h
+	draw.c  draw.h
 	analogue.c)
 
 find_package(SDL2 REQUIRED)
