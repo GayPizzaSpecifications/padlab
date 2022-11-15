@@ -2,7 +2,29 @@
 #include "maths.h"
 #include <SDL_render.h>
 
-SDL_Renderer* rend = NULL;
+static SDL_Renderer* rend = NULL;
+
+int InitDraw(SDL_Window* window)
+{
+	const int rendflags = SDL_RENDERER_PRESENTVSYNC;
+	rend = SDL_CreateRenderer(window, -1, rendflags);
+	return (rend == NULL) ? -1 : 0;
+}
+
+void QuitDraw(void)
+{
+	SDL_DestroyRenderer(rend);
+	rend = NULL;
+}
+
+
+rect GetDrawSizeInPixels(void)
+{
+	rect out = {0, 0, 0, 0};
+	SDL_GetRendererOutputSize(rend, &out.w, &out.h);
+	return out;
+}
+
 
 void SetDrawColour(uint32_t c)
 {
@@ -59,4 +81,9 @@ void DrawCircleSteps(int x, int y, int r, int steps)
 		lastx = ofsx;
 		lasty = ofsy;
 	}
+}
+
+void DrawPresent(void)
+{
+	SDL_RenderPresent(rend);
 }

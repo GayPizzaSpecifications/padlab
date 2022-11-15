@@ -32,7 +32,7 @@ int main(int argc, char** argv)
 	res = SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER);
 	if (res < 0)
 		goto error;
-	
+
 	const int winpos = SDL_WINDOWPOS_CENTERED;
 	const int winflg = SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI;
 	int winw = WINDOW_WIDTH;
@@ -44,16 +44,13 @@ int main(int argc, char** argv)
 		goto error;
 	}
 
-	const int rendflags = SDL_RENDERER_PRESENTVSYNC;
-	rend = SDL_CreateRenderer(window, -1, rendflags);
-	if (rend == NULL)
+	if (InitDraw(window))
 	{
 		res = -1;
 		goto error;
 	}
 
-	int rw, rh;
-	SDL_GetRendererOutputSize(rend, &rw, &rh);
+	rect rendRect = GetDrawSizeInPixels();
 
 	if ((res = SDL_GameControllerAddMappingsFromFile("gamecontrollerdb.txt")) != -1)
 		printf("read %d mappings from gamecontrollerdb.txt\n", res);
@@ -130,7 +127,7 @@ int main(int argc, char** argv)
 					{
 						winw = event.window.data1;
 						winh = event.window.data2;
-						SDL_GetRendererOutputSize(rend, &rw, &rh);
+						rendRect = GetDrawSizeInPixels();
 						repaint = true;
 					}
 					else if (event.window.event == SDL_WINDOWEVENT_EXPOSED)
@@ -224,23 +221,23 @@ int main(int argc, char** argv)
 			}
 			while (SDL_PollEvent(&event) > 0);
 		}
-		
+
 		if (repaint)
 		{
 			// background
 			SetDrawColour(0x1F1F1FFF);
 			DrawClear();
 
-			const int hrw = rw / 2;
-			DrawDigital(&(rect){0, 0, hrw, rh}, &stickl);
-			DrawAnalogue(&(rect){hrw, 0, hrw, rh}, &stickr);
+			const int hrw = rendRect.w / 2;
+			DrawDigital(&(rect){0, 0, hrw, rendRect.h}, &stickl);
+			DrawAnalogue(&(rect){hrw, 0, hrw, rendRect.h}, &stickr);
 
 			// test player thingo
 			if (showavatar)
 			{
 				plrpos = VecAdd(plrpos, VecScale(stickl.compos, framedelta * 0.5));
-				plrpos.x = pfmod(plrpos.x, rw);
-				plrpos.y = pfmod(plrpos.y, rh);
+				plrpos.x = pfmod(plrpos.x, rendRect.w);
+				plrpos.y = pfmod(plrpos.y, rendRect.h);
 
 				SetDrawColour(0xFF0000FF);
 				const int plrSz = 32;
@@ -250,15 +247,15 @@ int main(int argc, char** argv)
 					plrSz, plrSz);
 			}
 
-			SDL_RenderPresent(rend);
+			DrawPresent();
 			repaint = false;
 		}
 	}
-	
+
 	res = 0;
 error:
 	SDL_GameControllerClose(pad);
-	SDL_DestroyRenderer(rend);
+	QuitDraw();
 	SDL_DestroyWindow(window);
 	SDL_Quit();
 	return res;
