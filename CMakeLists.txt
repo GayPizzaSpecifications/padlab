@@ -3,7 +3,7 @@ project(padlab C)
 set(CMAKE_C_STANDARD 99)
 set(TARGET padlab)
 set(SOURCES
-	maths.c maths.h
+	maths.h
 	draw.c  draw.h
 	stick.c stick.h
 	analogue.c)
