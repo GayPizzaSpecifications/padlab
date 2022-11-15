@@ -3,7 +3,7 @@
 
 #define DISPLAY_SCALE 0.8889
 
-#include "maths.h"
+#include "util.h"
 #include <stdint.h>
 
 typedef struct SDL_Window SDL_Window;
@@ -33,6 +33,9 @@ void QuitDraw(void);
 //   size struct with 'w' and 'h' set to the width &
 //   height of the canvas in actual pixels.
 size GetDrawSizeInPixels(void);
+
+// Call on resize for backends that need manual viewport resizing.
+void SetDrawViewport(size size);
 
 // Set the current draw colour.
 //

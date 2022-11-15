@@ -9,11 +9,11 @@
 #define WINDOW_WIDTH  512
 #define WINDOW_HEIGHT 288
 
-SDL_Window* window = NULL;
-SDL_JoystickID joyid = -1;
-SDL_GameController* pad = NULL;
+static SDL_Window* window = NULL;
+static SDL_JoystickID joyid = -1;
+static SDL_GameController* pad = NULL;
 
-bool UseGamepad(int aJoyid)
+static bool UseGamepad(int aJoyid)
 {
 	pad = SDL_GameControllerOpen(aJoyid);
 	joyid = SDL_JoystickGetDeviceInstanceID(aJoyid);
@@ -121,6 +121,7 @@ int main(int argc, char** argv)
 						winw = event.window.data1;
 						winh = event.window.data2;
 						rendSize = GetDrawSizeInPixels();
+						SetDrawViewport(rendSize);
 						repaint = true;
 					}
 					else if (event.window.event == SDL_WINDOWEVENT_EXPOSED)
@@ -218,7 +219,7 @@ int main(int argc, char** argv)
 		if (repaint)
 		{
 			// background
-			SetDrawColour(0x1F1F1FFF);
+			SetDrawColour(MKGREY(0x1F, 0xFF));
 			DrawClear();
 
 			const int hrw = rendSize.w / 2;

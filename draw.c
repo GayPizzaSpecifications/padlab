@@ -27,6 +27,8 @@ size GetDrawSizeInPixels(void)
 	return out;
 }
 
+void SetDrawViewport(size size) {}
+
 
 void SetDrawColour(uint32_t c)
 {

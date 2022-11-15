@@ -2,6 +2,7 @@
 #define STICK_H
 
 #include "maths.h"
+#include "util.h"
 #include <stdbool.h>
 
 typedef struct

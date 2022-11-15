@@ -73,7 +73,7 @@ void DrawAnalogue(const rect* win, StickState* p)
 	double size = (double)(win->w > win->h ? win->h : win->w) * DISPLAY_SCALE;
 
 	// range rect
-	SetDrawColour(0x3F3F3FFF);
+	SetDrawColour(MKGREY(0x3F, 0xFF));
 	const int rectSz = (int)round(size);
 	DrawRect(
 		win->x + (win->w - rectSz) / 2,
@@ -84,7 +84,7 @@ void DrawAnalogue(const rect* win, StickState* p)
 	const int oy = win->y + win->h / 2;
 
 	// acceleration curve
-	SetDrawColour(0x4F4F4FFF);
+	SetDrawColour(MKGREY(0x4F, 0xFF));
 	const int accelsamp = (int)(sqrt(size) * 4.20);
 	const double step = 1.0 / (double)accelsamp;
 	double y1 = AccelCurve(0.0, p->accelpow);
@@ -114,14 +114,14 @@ void DrawAnalogue(const rect* win, StickState* p)
 		oy + tickery);
 
 	// guide circle
-	SetDrawColour(0x4F4F4FFF);
+	SetDrawColour(MKGREY(0x4F, 0xFF));
 	DrawCircle(ox, oy, (int)round(size) / 2);
 
-	SetDrawColour(0x3F3F3FFF);
+	SetDrawColour(MKGREY(0x3F, 0xFF));
 	DrawCircle(ox, oy, (int)round(p->deadzone * size) / 2);
 
 	// 0,0 line axis'
-	SetDrawColour(0x2F2F2FFF);
+	SetDrawColour(MKGREY(0x2F, 0xFF));
 	DrawLine(
 		win->x, oy,
 		win->x + win->w, oy);
@@ -140,7 +140,7 @@ void DrawAnalogue(const rect* win, StickState* p)
 		oy + (int)round(p->compos.y * size / 2.0));
 
 	// raw position
-	SetDrawColour(0xFFFFFFFF);
+	SetDrawColour(WHITE);
 	DrawLine(
 		ox + (int)round(p->rawpos.x * size / 2.0) - 4,
 		oy + (int)round(p->rawpos.y * size / 2.0),
@@ -164,7 +164,7 @@ void DrawDigital(const rect* win, StickState* p)
 	const double size = (double)(win->w > win->h ? win->h : win->w) * DISPLAY_SCALE;
 
 	// range rect
-	SetDrawColour(0x3F3F3FFF);
+	SetDrawColour(MKGREY(0x3F, 0xFF));
 	const int rectSz = (int)round(size);
 	DrawRect(
 		win->x + (win->w - rectSz) / 2,
@@ -176,11 +176,11 @@ void DrawDigital(const rect* win, StickState* p)
 	const int oy = win->y + win->h / 2;
 
 	// guide circle
-	SetDrawColour(0x4F4F4FFF);
+	SetDrawColour(MKGREY(0x4F, 0xFF));
 	DrawCircle(ox, oy, (int)round(size) / 2);
 
 	// 0,0 line axis'
-	SetDrawColour(0x2F2F2FFF);
+	SetDrawColour(MKGREY(0x2F, 0xFF));
 	DrawLine(
 		win->x, oy,
 		win->x + win->w, oy);
@@ -195,7 +195,7 @@ void DrawDigital(const rect* win, StickState* p)
 	const int innh = (int)round(p->digideadzone * size / 2.0);
 	const int innq = (int)round(p->digideadzone * size / 2.0 * p->digiangle);
 
-	SetDrawColour(0x3F3F3FFF);
+	SetDrawColour(MKGREY(0x3F, 0xFF));
 
 	// angles preview
 	DrawLine(ox - outq, oy - outh, ox - innq, oy - innh);
@@ -229,7 +229,7 @@ void DrawDigital(const rect* win, StickState* p)
 		oy + (int)round(p->compos.y * size / 2.0));
 
 	// raw position
-	SetDrawColour(0xFFFFFFFF);
+	SetDrawColour(WHITE);
 	DrawLine(
 		ox + (int)round(p->rawpos.x * size / 2.0) - 4,
 		oy + (int)round(p->rawpos.y * size / 2.0),

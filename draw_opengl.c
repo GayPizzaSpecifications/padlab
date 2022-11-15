@@ -1,4 +1,5 @@
 #include "draw.h"
+#include "maths.h"
 #include <SDL_video.h>
 #include <SDL_opengl.h>
 #include <stdbool.h>
@@ -42,7 +43,7 @@ int InitDraw(SDL_Window* w)
 	glDisable(GL_CULL_FACE);
 	glEnable(GL_MULTISAMPLE);
 
-	GetDrawSizeInPixels(); // Fills scaleWidth & scaleHeight
+	SetDrawViewport(GetDrawSizeInPixels()); // Fills scaleWidth & scaleHeight
 
 	// Setup orthographic viewport
 	glMatrixMode(GL_PROJECTION);
@@ -65,9 +66,14 @@ size GetDrawSizeInPixels(void)
 {
 	size out;
 	SDL_GL_GetDrawableSize(SDL_GL_GetCurrentWindow(), &out.w, &out.h);
-	scaleWidth  = 1.0 / (double)out.w;
-	scaleHeight = 1.0 / (double)out.h;
 	return out;
+}
+
+void SetDrawViewport(size size)
+{
+	glViewport(0, 0, size.w, size.h);
+	scaleWidth  = 1.0 / (double)size.w;
+	scaleHeight = 1.0 / (double)size.h;
 }
 
 
