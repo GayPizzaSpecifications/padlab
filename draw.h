@@ -8,6 +8,10 @@
 
 typedef struct SDL_Window SDL_Window;
 
+// Call before window creation to setup backend-specific
+// hints and attributes.
+void DrawWindowHints(void);
+
 // Initialise the drawing subsystem.
 //
 // Params:

@@ -4,6 +4,8 @@
 
 static SDL_Renderer* rend = NULL;
 
+void DrawWindowHints(void) {}
+
 int InitDraw(SDL_Window* window)
 {
 	const int rendflags = SDL_RENDERER_PRESENTVSYNC;
@@ -68,7 +70,7 @@ void DrawCircleSteps(int x, int y, int r, int steps)
 	double stepsz = (double)TAU / steps;
 	int lastx = r;
 	int lasty = 0;
-	for (int i = 0; i <= steps; ++i)
+	for (int i = 1; i <= steps; ++i)
 	{
 		const double mag = (double)r;
 		int ofsx = (int)round(cos(stepsz * i) * mag);

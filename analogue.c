@@ -38,6 +38,7 @@ int main(int argc, char** argv)
 	const int winflg = SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI;
 	int winw = WINDOW_WIDTH;
 	int winh = WINDOW_HEIGHT;
+	DrawWindowHints();
 	window = SDL_CreateWindow(CAPTION, winpos, winpos, winw, winh, winflg);
 	FATAL(window == NULL, -1)
 
