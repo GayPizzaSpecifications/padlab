@@ -1,6 +1,8 @@
 #ifndef DRAW_H
 #define DRAW_H
 
+#define DISPLAY_SCALE 0.8889
+
 #include <stdint.h>
 
 typedef struct SDL_Renderer SDL_Renderer;

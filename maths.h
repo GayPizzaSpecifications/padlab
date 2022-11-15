@@ -12,7 +12,9 @@
 #define SATURATE(X) (CLAMP(X, 0, 1))
 
 typedef double vec_t;
-typedef struct {vec_t x, y;} vector;
+typedef struct { vec_t x, y; } vector;
+
+typedef struct { int x, y, w, h; } rect;
 
 static inline vector VecAdd(vector l, vector r)
 {
@@ -27,11 +29,6 @@ static inline vector VecScale(vector v, vec_t x)
 static inline double pfmod(double x, double d)
 {
 	return fmod(fmod(x, d) + d, (d));
-}
-
-static inline double AccelCurve(double x, double y)
-{
-	return (x * (x + y)) / (1.0 + y);
 }
 
 #endif//MATHS_H

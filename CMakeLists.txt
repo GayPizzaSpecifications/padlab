@@ -5,6 +5,7 @@ set(TARGET padlab)
 set(SOURCES
 	maths.c maths.h
 	draw.c  draw.h
+	stick.c stick.h
 	analogue.c)
 
 find_package(SDL2 REQUIRED)
