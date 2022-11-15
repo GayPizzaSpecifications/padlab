@@ -26,9 +26,9 @@ void QuitDraw(void);
 // Get the actual size of the canvas in pixels.
 //
 // Returns:
-//   rectangle struct with 'w' and 'h' set to the width &
+//   size struct with 'w' and 'h' set to the width &
 //   height of the canvas in actual pixels.
-rect GetDrawSizeInPixels(void);
+size GetDrawSizeInPixels(void);
 
 // Set the current draw colour.
 //

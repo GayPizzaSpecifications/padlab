@@ -18,9 +18,9 @@ void QuitDraw(void)
 }
 
 
-rect GetDrawSizeInPixels(void)
+size GetDrawSizeInPixels(void)
 {
-	rect out = {0, 0, 0, 0};
+	size out = {0, 0};
 	SDL_GetRendererOutputSize(rend, &out.w, &out.h);
 	return out;
 }

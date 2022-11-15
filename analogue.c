@@ -25,6 +25,7 @@ bool UseGamepad(int aJoyid)
 	return false;
 }
 
+#define FATAL(CONDITION, RETURN) if (CONDITION) { res = (RETURN); goto error; }
 int main(int argc, char** argv)
 {
 	int res;
@@ -38,19 +39,10 @@ int main(int argc, char** argv)
 	int winw = WINDOW_WIDTH;
 	int winh = WINDOW_HEIGHT;
 	window = SDL_CreateWindow(CAPTION, winpos, winpos, winw, winh, winflg);
-	if (window == NULL)
-	{
-		res = -1;
-		goto error;
-	}
+	FATAL(window == NULL, -1)
 
-	if (InitDraw(window))
-	{
-		res = -1;
-		goto error;
-	}
-
-	rect rendRect = GetDrawSizeInPixels();
+	FATAL(InitDraw(window), -1)
+	size rendSize = GetDrawSizeInPixels();
 
 	if ((res = SDL_GameControllerAddMappingsFromFile("gamecontrollerdb.txt")) != -1)
 		printf("read %d mappings from gamecontrollerdb.txt\n", res);
@@ -127,7 +119,7 @@ int main(int argc, char** argv)
 					{
 						winw = event.window.data1;
 						winh = event.window.data2;
-						rendRect = GetDrawSizeInPixels();
+						rendSize = GetDrawSizeInPixels();
 						repaint = true;
 					}
 					else if (event.window.event == SDL_WINDOWEVENT_EXPOSED)
@@ -228,16 +220,16 @@ int main(int argc, char** argv)
 			SetDrawColour(0x1F1F1FFF);
 			DrawClear();
 
-			const int hrw = rendRect.w / 2;
-			DrawDigital(&(rect){0, 0, hrw, rendRect.h}, &stickl);
-			DrawAnalogue(&(rect){hrw, 0, hrw, rendRect.h}, &stickr);
+			const int hrw = rendSize.w / 2;
+			DrawDigital(&(rect){ 0, 0, hrw, rendSize.h}, &stickl);
+			DrawAnalogue(&(rect){ hrw, 0, hrw, rendSize.h}, &stickr);
 
 			// test player thingo
 			if (showavatar)
 			{
 				plrpos = VecAdd(plrpos, VecScale(stickl.compos, framedelta * 0.5));
-				plrpos.x = pfmod(plrpos.x, rendRect.w);
-				plrpos.y = pfmod(plrpos.y, rendRect.h);
+				plrpos.x = pfmod(plrpos.x, rendSize.w);
+				plrpos.y = pfmod(plrpos.y, rendSize.h);
 
 				SetDrawColour(0xFF0000FF);
 				const int plrSz = 32;

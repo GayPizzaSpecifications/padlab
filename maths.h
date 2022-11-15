@@ -6,14 +6,14 @@
 #define PI  3.141592653589793238462643383279502884L
 #define TAU 6.283185307179586476925286766559005768L
 
-#define MAX(LHS, RHS) ((LHS > RHS) ? (LHS) : (RHS))
-#define MIN(LHS, RHS) ((LHS < RHS) ? (LHS) : (RHS))
-#define CLAMP(X, A, B) (MIN(B, MAX(A, X)))
-#define SATURATE(X) (CLAMP(X, 0, 1))
+#define MAX(A, B) ((A) > (B) ? (A) : (B))
+#define MIN(A, B) ((A) < (B) ? (A) : (B))
+#define CLAMP(X, A, B) (MIN((B), MAX((A), (X))))
+#define SATURATE(X) (CLAMP((X), 0, 1))
 
 typedef double vec_t;
 typedef struct { vec_t x, y; } vector;
-
+typedef struct { int w, h; } size;
 typedef struct { int x, y, w, h; } rect;
 
 static inline vector VecAdd(vector l, vector r)
