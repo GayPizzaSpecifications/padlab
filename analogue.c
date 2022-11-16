@@ -219,7 +219,7 @@ int main(int argc, char** argv)
 		if (repaint)
 		{
 			// background
-			SetDrawColour(MKGREY(0x1F, 0xFF));
+			SetDrawColour(GREY1);
 			DrawClear();
 
 			const int hrw = rendSize.w / 2;
@@ -233,7 +233,7 @@ int main(int argc, char** argv)
 				plrpos.x = pfmod(plrpos.x, rendSize.w);
 				plrpos.y = pfmod(plrpos.y, rendSize.h);
 
-				SetDrawColour(0xFF0000FF);
+				SetDrawColour(AVATAR);
 				const int plrSz = 32;
 				DrawRect(
 					(int)plrpos.x - plrSz / 2,

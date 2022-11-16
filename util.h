@@ -18,5 +18,16 @@ typedef struct { int x, y, w, h; } rect;
 	((A) & 0x000000FF))
 
 #define WHITE 0xFFFFFFFF
+#define GREY1 MKGREY(0x1F, 0xFF)
+#define GREY2 MKGREY(0x47, 0xFF)
+#define GREY3 MKGREY(0x67, 0xFF)
+#define GREY4 MKGREY(0x83, 0xFF)
+#define HILIGHT_GR1 0x2F3F1FFF
+#define HILIGHT_GR2 0x2F5F2FFF
+#define HILIGHT_GR3 0x1FFF1FFF
+#define HILIGHT_PU1 0x632E63FF
+#define HILIGHT_PU2 0x8A418AFF
+#define HILIGHT_PU3 0xFF68FFFF
+#define AVATAR 0xFF3333FF
 
 #endif//UTIL_H
