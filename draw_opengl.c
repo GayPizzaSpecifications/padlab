@@ -45,6 +45,8 @@ int InitDraw(SDL_Window* w)
 
 	SetDrawViewport(GetDrawSizeInPixels()); // Fills scaleWidth & scaleHeight
 
+	glLineWidth(2.0f);
+
 	// Setup orthographic viewport
 	glMatrixMode(GL_PROJECTION);
 	glOrtho(0.0, 1.0f, 1.0f, 0.0, 1.0, -1.0);
@@ -169,6 +171,35 @@ void DrawCircleSteps(int x, int y, int r, int steps)
 	for (int i = 1; i < steps; ++i)
 	{
 		const double theta = stepsz * (double)i;
+		double ofsx = cos(theta) * magw;
+		double ofsy = sin(theta) * magh;
+		glVertex2d(fx + ofsx, fy - ofsy);
+	}
+	glEnd();
+}
+
+void DrawArc(int x, int y, int r, int startAng, int endAng)
+{
+	const int steps = (int)(sqrt((double)r) * (double)abs(endAng - startAng) / 360.0 * 8.0);
+	DrawArcSteps(x, y, r, startAng, endAng, steps);
+}
+
+void DrawArcSteps(int x, int y, int r, int startAng, int endAng, int steps)
+{
+	// Arcs look better when offset negatively by half a pixel w/o MSAA
+	const double fx = (antialias ? (double)x : (double)x - 0.5f) * scaleWidth;
+	const double fy = (antialias ? (double)y : (double)y - 0.5f) * scaleHeight;
+
+	const double magw   = (double)r * scaleWidth;
+	const double magh   = (double)r * scaleHeight;
+
+	glBegin(GL_LINE_STRIP);
+		GlColour();
+	const double fstart = (double)startAng * DEG2RAD;
+	const double fstepSz = (double)(endAng - startAng) / abs(steps) * DEG2RAD;
+	for (int i = 0; i <= steps; ++i)
+	{
+		const double theta = fstart + fstepSz * (double)i;
 		double ofsx = cos(theta) * magw;
 		double ofsy = sin(theta) * magh;
 		glVertex2d(fx + ofsx, fy - ofsy);

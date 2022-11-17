@@ -67,6 +67,12 @@ void DrawCircle(int x, int y, int r);
 // Can be used to draw regular convex polygons such as an octagon.
 void DrawCircleSteps(int x, int y, int r, int steps);
 
+// Draw an arc.
+void DrawArc(int x, int y, int r, int startAng, int endAng);
+
+// Draw an arc with a discrete number of steps.
+void DrawArcSteps(int x, int y, int r, int startAng, int endAng, int steps);
+
 // Present the current buffer to the screen.
 void DrawPresent(void);
 

@@ -87,6 +87,35 @@ void DrawCircleSteps(int x, int y, int r, int steps)
 	}
 }
 
+void DrawArc(int x, int y, int r, int startAng, int endAng)
+{
+	const int steps = (int)(sqrt((double)r) * (double)abs(endAng - startAng) / 360.0 * 8.0);
+	DrawArcSteps(x, y, r, startAng, endAng, steps);
+}
+
+void DrawArcSteps(int x, int y, int r, int startAng, int endAng, int steps)
+{
+	const double fstart = (double)startAng * DEG2RAD;
+	const double fstepSz = (double)(endAng - startAng) / abs(steps) * DEG2RAD;
+	const double mag = (double)r;
+
+	int lastx = (int)round(cos(fstart) * mag);
+	int lasty = (int)round(-sin(fstart) * mag);
+	for (int i = 1; i <= steps; ++i)
+	{
+		const double theta = fstart + fstepSz * (double)i;
+		int ofsx = (int)round(cos(theta) * mag);
+		int ofsy = (int)round(-sin(theta) * mag);
+
+		SDL_RenderDrawLine(rend,
+			x + lastx, y + lasty,
+			x + ofsx, y + ofsy);
+
+		lastx = ofsx;
+		lasty = ofsy;
+	}
+}
+
 void DrawPresent(void)
 {
 	SDL_RenderPresent(rend);

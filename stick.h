@@ -17,6 +17,7 @@ typedef struct
 	double deadzone;
 
 	// digital
+	point digixy;
 	double digiangle;
 	double digideadzone;
 } StickState;
@@ -32,6 +33,7 @@ inline void InitDefaults(StickState* p)
 	p->accelpow = 1.25;
 	p->deadzone = 0.125;
 
+	p->digixy = (point){0, 0};
 	p->digiangle = sqrt(2.0) - 1.0;
 	p->digideadzone = 0.5;
 }

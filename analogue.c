@@ -35,7 +35,11 @@ int main(int argc, char** argv)
 		goto error;
 
 	const int winpos = SDL_WINDOWPOS_CENTERED;
+#ifdef USE_OPENGL
+	const int winflg = SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL | SDL_WINDOW_ALLOW_HIGHDPI;
+#else
 	const int winflg = SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI;
+#endif
 	int winw = WINDOW_WIDTH;
 	int winh = WINDOW_HEIGHT;
 	DrawWindowHints();
