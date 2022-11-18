@@ -150,11 +150,6 @@ void DrawLine(int x1, int y1, int x2, int y2)
 	glEnd();
 }
 
-void DrawCircle(int x, int y, int r)
-{
-	DrawCircleSteps(x, y, r, (int)(sqrt((double)r) * 8.0));
-}
-
 void DrawCircleSteps(int x, int y, int r, int steps)
 {
 	// Circles look better when offset negatively by half a pixel w/o MSAA
@@ -176,12 +171,6 @@ void DrawCircleSteps(int x, int y, int r, int steps)
 		glVertex2d(fx + ofsx, fy - ofsy);
 	}
 	glEnd();
-}
-
-void DrawArc(int x, int y, int r, int startAng, int endAng)
-{
-	const int steps = (int)(sqrt((double)r) * (double)abs(endAng - startAng) / 360.0 * 8.0);
-	DrawArcSteps(x, y, r, startAng, endAng, steps);
 }
 
 void DrawArcSteps(int x, int y, int r, int startAng, int endAng, int steps)
