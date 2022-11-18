@@ -20,7 +20,8 @@ typedef struct { int x, y, w, h; } rect;
 
 #define MKRGB(C) (uint32_t)(((C) << 8) | 0x000000FF)
 
-#define WHITE 0xFFFFFFFF
+#define BLACK MKRGB(0x000000)
+#define WHITE MKRGB(0xFFFFFF)
 #define GREY1 MKGREY(0x1F, 0xFF)
 #define GREY2 MKGREY(0x37, 0xFF)
 #define GREY3 MKGREY(0x4F, 0xFF)

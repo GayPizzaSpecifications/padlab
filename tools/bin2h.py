@@ -3,6 +3,7 @@
 import sys
 from pathlib import Path
 from typing import BinaryIO, TextIO
+from os import SEEK_SET, SEEK_END
 import re
 
 
@@ -16,7 +17,24 @@ def sanitise_label(label: str) -> str:
 
 
 def bin2h(name: str, binf: BinaryIO, h: TextIO):
-	raise NotImplementedError
+	label = sanitise_label(name)
+
+	binf.seek(0, SEEK_END)
+	length = binf.tell()
+	binf.seek(0, SEEK_SET)
+	h.write(f"#define {label.upper()}_SIZE {length}\n")
+
+	whitespace = "\t"
+	h.write(f"static const unsigned char {label}[{length}] = {{\n{whitespace}")
+
+	for i, c in enumerate(binf.read()):
+		if i != 0:
+			h.write(", ")
+			if i % 16 == 0:
+				h.write(f"\n{whitespace}")
+		h.write(f"0x{c:02X}")
+
+	h.write("\n};\n")
 
 
 def txt2h(name: str, txt: TextIO, h: TextIO):
@@ -93,16 +111,16 @@ def main():
 			path = Path(i)
 			with path.open("rb") as file:
 				bin2h(path.name, file, h)
+				h.write("\n")
 
 		# Write texts
 		for i in txtfiles:
 			path = Path(i)
 			with path.open("r") as file:
 				txt2h(path.name, file, h)
+				h.write("\n")
 
-		h.writelines([
-			"\n",
-			f"#endif//{guard}\n"])
+		h.write(f"#endif//{guard}\n")
 
 
 if __name__ == "__main__":
