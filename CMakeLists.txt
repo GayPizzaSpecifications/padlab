@@ -12,10 +12,10 @@ if (USE_OPENGL)
 endif()
 
 set(SOURCES
-	maths.h
-	draw.h  $<IF:$<BOOL:${USE_OPENGL}>,draw_opengl.c,draw.c>
-	stick.c stick.h
-	analogue.c)
+	src/maths.h
+	src/draw.h     src/$<IF:$<BOOL:${USE_OPENGL}>,draw_opengl.c,draw.c>
+	src/stick.c    src/stick.h
+	src/analogue.c)
 
 add_executable(${TARGET} ${SOURCES})
 target_link_libraries(${TARGET}
