@@ -233,15 +233,17 @@ int main(int argc, char** argv)
 			// test player thingo
 			if (showavatar)
 			{
+				const int plrSz = 32;
+				const int hplrSz = plrSz / 2;
+
 				plrpos = VecAdd(plrpos, VecScale(stickl.compos, framedelta * 0.5));
-				plrpos.x = pfmod(plrpos.x, rendSize.w);
-				plrpos.y = pfmod(plrpos.y, rendSize.h);
+				plrpos.x = pfmod(plrpos.x + hplrSz, rendSize.w + plrSz) - hplrSz;
+				plrpos.y = pfmod(plrpos.y + hplrSz, rendSize.h + plrSz) - hplrSz;
 
 				SetDrawColour(AVATAR);
-				const int plrSz = 32;
 				DrawRect(
-					(int)plrpos.x - plrSz / 2,
-					(int)plrpos.y - plrSz / 2,
+					(int)plrpos.x - hplrSz,
+					(int)plrpos.y - hplrSz,
 					plrSz, plrSz);
 			}
 
