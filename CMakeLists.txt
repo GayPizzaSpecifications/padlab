@@ -1,9 +1,18 @@
-cmake_minimum_required(VERSION 3.8 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.3 FATAL_ERROR)
 project(padlab C)
 set(TARGET padlab)
 
-option(USE_OPENGL "Use legacy OpenGL for drawing" ON)
+option(USE_OPENGL "Use OpenGL for drawing (WIP)" OFF)
+if (USE_OPENGL)
+	option(USE_OPENGL_LEGACY "Use legacy OpenGL for drawing" OFF)
+	if (USE_OPENGL_LEGACY)
+		message(FATAL_ERROR "USE_OPENGL and USE_OPENGL_LEGACY are both ON but only one backend can be used at a time, turn one OFF and regenerate. (or delete cache and try again)")
+	endif()
+else()
+	option(USE_OPENGL_LEGACY "Use legacy OpenGL for drawing" ON)
+endif()
 
+list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
 set(CMAKE_C_STANDARD 99)
 set(GNU_COMPILERS GNU Clang AppleClang)
 if (CMAKE_C_COMPILER_ID IN_LIST GNU_COMPILERS)
@@ -13,26 +22,11 @@ elseif (MSVC)
 endif()
 
 find_package(SDL2 REQUIRED)
-if (USE_OPENGL)
+if (USE_OPENGL OR USE_OPENGL_LEGACY)
 	if (NOT DEFINED OpenGL_GL_PREFERENCE)
 		set(OpenGL_GL_PREFERENCE "GLVND")
 	endif()
 	find_package(OpenGL REQUIRED)
 endif()
 
-set(SOURCES
-	src/maths.h
-	src/draw.h     src/$<IF:$<BOOL:${USE_OPENGL}>,draw_opengl.c,draw.c>
-	src/stick.c    src/stick.h
-	src/analogue.c)
-
-add_executable(${TARGET} ${SOURCES})
-target_link_libraries(${TARGET}
-	$<$<PLATFORM_ID:Windows>:SDL2::SDL2main>
-	SDL2::SDL2
-	$<$<BOOL:${USE_OPENGL}>:OpenGL::GL>
-	$<$<BOOL:${GNU}>:m>)
-target_compile_options(${TARGET} PRIVATE
-	$<$<BOOL:${GNU}>:-Wall -Wextra -pedantic -Wno-unused-parameter>)
-target_compile_definitions(${TARGET} PRIVATE
-	$<$<BOOL:${USE_OPENGL}>:USE_OPENGL>)
+add_subdirectory(src)
