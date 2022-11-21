@@ -5,6 +5,11 @@ set(TARGET padlab)
 option(USE_OPENGL "Use legacy OpenGL for drawing" ON)
 
 set(CMAKE_C_STANDARD 99)
+if (C_COMPILER_ID IN_LIST "GNU;Clang;AppleClang")
+	set(GNU)
+elseif (MSVC)
+	string(REPLACE "/W3" "/W4" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
+endif()
 
 find_package(SDL2 REQUIRED)
 if (USE_OPENGL)
@@ -19,8 +24,11 @@ set(SOURCES
 
 add_executable(${TARGET} ${SOURCES})
 target_link_libraries(${TARGET}
-	SDL2::SDL2 $<$<BOOL:${USE_OPENGL}>:OpenGL::GL> m)
+	$<$<PLATFORM_ID:Windows>:SDL2::SDL2main>
+	SDL2::SDL2
+	$<$<BOOL:${USE_OPENGL}>:OpenGL::GL>
+	$<$<BOOL:${GNU}>:m>)
 target_compile_options(${TARGET} PRIVATE
-	-Wall -Wextra -pedantic -Wno-unused-parameter)
+	$<$<BOOL:${GNU}>:-Wall -Wextra -pedantic -Wno-unused-parameter>)
 target_compile_definitions(${TARGET} PRIVATE
 	$<$<BOOL:${USE_OPENGL}>:USE_OPENGL>)
