@@ -13,7 +13,7 @@ if (USE_OPENGL)
 	include(GL3WHelper)
 	add_gl3w(gl3w)
 	include(BinHelper)
-	bin2h_compile(OUTPUT glslShaders.h TXT vert.glsl frag.glsl)
+	bin2h_compile(OUTPUT glslShaders.h TXT vert.glsl geom.glsl frag.glsl)
 	list(APPEND SOURCES ${CMAKE_CURRENT_BINARY_DIR}/glslShaders.h)
 endif()
 
