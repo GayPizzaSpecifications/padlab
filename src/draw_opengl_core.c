@@ -25,7 +25,6 @@ static uint32_t
 	colour     = 0x00000000,
 	drawColour = 0x00000000,
 	clrColour  = 0x00000000;
-static bool antialias = false;
 
 #define DRAWLIST_MAX_SIZE 480
 static vertex drawListVerts[DRAWLIST_MAX_SIZE];
@@ -34,7 +33,7 @@ static uint16_t drawListCount = 0, drawListVertNum = 0;
 static GLuint vao = 0, drawListVbo = 0, drawListIbo = 0;
 
 static GLuint program = 0;
-static GLint uView, uColour;
+static GLint uView, uColour, uScaleFact;
 
 
 #if DRAWLIST_MAX_SIZE < 2 || DRAWLIST_MAX_SIZE >= UINT16_MAX
@@ -59,9 +58,6 @@ static void GlErrorCb(
 
 void DrawWindowHints(void)
 {
-	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLEBUFFERS, 1);  // Enable MSAA
-	SDL_GL_SetAttribute(SDL_GL_MULTISAMPLESAMPLES, 16); // 16x MSAA
-
 	// Modern OpenGL profile
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MAJOR_VERSION, OPENGL_VERSION_MAJOR);
 	SDL_GL_SetAttribute(SDL_GL_CONTEXT_MINOR_VERSION, OPENGL_VERSION_MINOR);
@@ -98,7 +94,7 @@ static inline GLuint CompilerShader(const char* src, GLenum type)
 }
 
 static inline GLuint LinkProgram(
-	GLuint vertShader, GLuint fragShader,
+	GLuint vertShader, GLuint geomShader, GLuint fragShader,
 	const char* const attrNames[], GLuint attrCount)
 {
 	GLuint progId = glCreateProgram();
@@ -109,6 +105,7 @@ static inline GLuint LinkProgram(
 
 	// Attach shaders & link program
 	glAttachShader(progId, vertShader);
+	glAttachShader(progId, geomShader);
 	glAttachShader(progId, fragShader);
 	glLinkProgram(progId);
 
@@ -143,12 +140,6 @@ int InitDraw(SDL_Window* _window)
 
 	SDL_GL_SetSwapInterval(1); // Enable vsync
 
-	// Detect if MSAA is available & active
-	int res;
-	if (SDL_GL_GetAttribute(SDL_GL_MULTISAMPLEBUFFERS, &res) == 0 && res == 1)
-		if (SDL_GL_GetAttribute(SDL_GL_MULTISAMPLESAMPLES, &res) == 0 && res > 0)
-			antialias = true;
-
 	// Load Core profile extensions
 	if (gl3wInit() != GL3W_OK)
 	{
@@ -170,24 +161,32 @@ int InitDraw(SDL_Window* _window)
 	// Ensure culling & depth testing are off
 	glDisable(GL_CULL_FACE);
 	glDisable(GL_DEPTH_TEST);
-	//glEnable(GL_BLEND); // These will be relevant if proper anti aliased line drawing is implemented
-	//glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
-	//glBlendEquation(GL_FUNC_ADD);
+	glEnable(GL_BLEND); // Enable alpha blending
+	glBlendFunc(GL_SRC_ALPHA, GL_ONE_MINUS_SRC_ALPHA);
+	glBlendEquation(GL_FUNC_ADD);
 
 	// Compile shaders
 	GLuint vert = CompilerShader(vert_glsl, GL_VERTEX_SHADER);
 	if (!vert)
 		return -1;
+	GLuint geom = CompilerShader(geom_glsl, GL_GEOMETRY_SHADER);
+	if (!geom)
+	{
+		glDeleteShader(vert);
+		return -1;
+	}
 	GLuint frag = CompilerShader(frag_glsl, GL_FRAGMENT_SHADER);
 	if (!frag)
 	{
+		glDeleteShader(geom);
 		glDeleteShader(vert);
 		return -1;
 	}
 
 	// Link program
-	program = LinkProgram(vert, frag, attribNames, NUM_ATTRIBS);
+	program = LinkProgram(vert, geom, frag, attribNames, NUM_ATTRIBS);
 	glDeleteShader(frag);
+	glDeleteShader(geom);
 	glDeleteShader(vert);
 	if (!program)
 		return -1;
@@ -195,6 +194,7 @@ int InitDraw(SDL_Window* _window)
 	// Get uniforms
 	uView = glGetUniformLocation(program, "uView");
 	uColour = glGetUniformLocation(program, "uColour");
+	uScaleFact = glGetUniformLocation(program, "uScaleFact");
 
 	glUseProgram(program); // Use program
 
@@ -279,6 +279,7 @@ void SetDrawViewport(size size)
 		 0.0f,  0.0f, 0.0f, 0.0f,
 		-1.0f,  1.0f, 0.0f, 1.0f};
 	glUniformMatrix4fv(uView, 1, GL_FALSE, mat);
+	glUniform2f(uScaleFact, 1.0f / (float)size.w, 1.0f / (float)size.h);
 }
 
 
@@ -375,7 +376,7 @@ void DrawLine(int x1, int y1, int x2, int y2)
 	else if (drawListCount > DRAWLIST_MAX_SIZE - 2)
 		FlushDrawBuffers();
 
-	vertex from = {x1, y1}, to = {x2, y2};
+	vertex from = {(float)x1, (float)y1}, to = {(float)x2, (float)y2};
 	if (drawListVertNum > 0 && memcmp(&from, &drawListVerts[drawListVertNum - 1], sizeof(vertex)) == 0)
 	{
 		// Reuse last vertex
@@ -440,10 +441,7 @@ void DrawCircleSteps(int x, int y, int r, int steps)
 	if (drawColour != colour)
 		UpdateDrawColour();
 
-	// Circles look better when offset negatively by half a pixel w/o MSAA
-	const float fx = (antialias ? (float)x : (float)x - 0.5f);
-	const float fy = (antialias ? (float)y : (float)y - 0.5f);
-
+	const float fx = (float)x, fy = (float)y;
 	const float stepSz = (float)TAU / (float)abs(steps);
 	const float mag = (float)r;
 	// Check if whole circle can fit in the buffer
@@ -477,13 +475,10 @@ void DrawArcSteps(int x, int y, int r, int startAng, int endAng, int steps)
 	if (drawColour != colour)
 		UpdateDrawColour();
 
-	// Arcs look better when offset negatively by half a pixel w/o MSAA
-	const float fx = (antialias ? (float)x : (float)x - 0.5f);
-	const float fy = (antialias ? (float)y : (float)y - 0.5f);
 	const float mag = (float)r;
 	const float fstart = (float)startAng * (float)DEG2RAD;
 	const float fstepSz = (float)(endAng - startAng) / (float)abs(steps) * (float)DEG2RAD;
-	ArcSlice(fx, fy, mag, mag, fstart, fstepSz, steps);
+	ArcSlice((float)x, (float)y, mag, mag, fstart, fstepSz, steps);
 }
 
 void DrawPresent(void)
@@ -491,7 +486,7 @@ void DrawPresent(void)
 	FlushDrawBuffers();
 	SDL_GL_SwapWindow(window);
 #ifndef NDEBUG
-	fprintf(stderr, "%d draw call(s)\n", drawCount);
+	//fprintf(stderr, "%d draw call(s)\n", drawCount);
 #endif
 	drawCount = 0;
 }
