@@ -276,7 +276,7 @@ void SetDrawViewport(size size)
 	float mat[16] = {
 		  s.x,  0.0f, 0.0f, 0.0f,
 		 0.0f,  -s.y, 0.0f, 0.0f,
-		 0.0f,  0.0f, 0.0f, 0.0f,
+		 0.0f,  0.0f, 1.0f, 0.0f,
 		-1.0f,  1.0f, 0.0f, 1.0f};
 	glUniformMatrix4fv(uView, 1, GL_FALSE, mat);
 	glUniform2f(uScaleFact, 1.0f / (float)size.w, 1.0f / (float)size.h);
