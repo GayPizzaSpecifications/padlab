@@ -29,7 +29,7 @@ static bool UseGamepad(int aJoyid)
 int main(int argc, char** argv)
 {
 	int res;
-	
+
 	res = SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER);
 	if (res < 0)
 		goto error;
@@ -77,7 +77,7 @@ int main(int argc, char** argv)
 		const uint32_t ticks = SDL_GetTicks();
 		const double framedelta = (double)(ticks - tickslast);
 		tickslast = ticks;
-		
+
 		SDL_Event event;
 		bool onevent = false;
 		if (!showavatar || (stickl.compos.x == 0.0 && stickl.compos.y == 0.0))
@@ -114,11 +114,11 @@ int main(int argc, char** argv)
 						repaint = true;
 					}
 					break;
-				
+
 				case (SDL_QUIT):
 					running = false;
 					break;
-					
+
 				case (SDL_WINDOWEVENT):
 					if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED)
 					{
@@ -133,7 +133,7 @@ int main(int argc, char** argv)
 						repaint = true;
 					}
 					break;
-					
+
 				case (SDL_CONTROLLERAXISMOTION):
 					if (event.caxis.which == joyid)
 					{
@@ -199,11 +199,13 @@ int main(int argc, char** argv)
 							repaint = stickr.recalc = true;
 						}
 					}
-					
+					break;
+
 				case (SDL_CONTROLLERDEVICEADDED):
 					if (pad == NULL)
 						UseGamepad(event.cdevice.which);
 					break;
+
 				case (SDL_CONTROLLERDEVICEREMOVED):
 					if (pad != NULL && event.cdevice.which == joyid)
 					{
@@ -212,7 +214,7 @@ int main(int argc, char** argv)
 						printf("active gamepad was removed\n");
 					}
 					break;
-					
+
 				default:
 					break;
 				}
