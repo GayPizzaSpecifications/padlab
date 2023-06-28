@@ -15,17 +15,14 @@
 - (id) init:(SDL_Window*)window;
 - (void) dealloc;
 
-- (unsigned) resizeBuffer:(void**)buf itemSize:(unsigned)nsz reserveLen:(unsigned)reserve requiredNum:(unsigned)count;
-- (void) resizeMtlBuffer:(id <MTLBuffer>*)buf length:(unsigned)length;
+- (unsigned) resizeBuffer:(id <MTLBuffer>*)buf itemSize:(unsigned)nsz requiredNum:(unsigned)count;
 
 - (size) getDrawSize;
-- (void) setClear:(uint32_t)colour;
 - (void) setView:(size)viewportSize;
-- (void) clearVerticesAndIndices;
+- (void) clear;
 - (void) reserveVertices:(unsigned)count;
 - (void) reserveIndices:(unsigned)count;
-- (uint16_t) queueVertex:(int)x :(int)y;
-- (uint16_t) queueVertexF:(float)x :(float)y;
+- (uint16_t) queueVertex:(float)x :(float)y;
 - (uint16_t) queueIndex:(uint16_t)idx;
 - (void) queueIndices:(uint16_t*)idcs count:(unsigned)count;
 - (void) present;
@@ -47,8 +44,6 @@
 	MTLViewport _viewport;
 	vector_float4 _drawColourF;
 
-	ShaderVertex* _vtxList;
-	uint16_t* _idxList;
 	unsigned _vtxListCount, _vtxListReserve, _idxListCount, _idxListReserve;
 	id<MTLBuffer> _vtxMtlBuffer, _idxMtlBuffer;
 }
@@ -59,10 +54,6 @@
 		return nil;
 
 	self.drawColour = BLACK;
-	_vtxList = NULL;
-	_idxList = NULL;
-	_vtxListCount = 0;
-	_idxListCount = 0;
 	_vtxListReserve = 0;
 	_idxListReserve = 0;
 	_vtxMtlBuffer = nil;
@@ -98,7 +89,7 @@
 	_passDesc = [MTLRenderPassDescriptor new];
 	_passDesc.colorAttachments[0].loadAction = MTLLoadActionClear;
 	_passDesc.colorAttachments[0].storeAction = MTLStoreActionStore;
-	[self setClear:self.drawColour]; // passDesc.colorAttachments[0].clearColor = curColour
+	[self clear]; // passDesc.colorAttachments[0].clearColor = curColour
 
 	// Compile shaders
 	__autoreleasing NSError* err = nil;
@@ -138,10 +129,12 @@
 }
 
 
-- (unsigned) resizeBuffer:(void**)buf itemSize:(unsigned)nsz reserveLen:(unsigned)reserve requiredNum:(unsigned)count
+- (unsigned) resizeBuffer:(id <MTLBuffer>*)buf itemSize:(unsigned)nsz requiredNum:(unsigned)count
 {
-	if (*buf && count * nsz <= reserve)
-		return reserve;
+	unsigned reserve;
+	if (*buf)
+		if (count * nsz <= (reserve = [*buf length]))
+			return reserve;
 
 	// Calculate new capacity
 	unsigned newCapacity = (count + DRAWLIST_CHUNK_SIZE - 1) / DRAWLIST_CHUNK_SIZE * DRAWLIST_CHUNK_SIZE;
@@ -150,22 +143,15 @@
 
 	// (Re)allocate and return new reserve size
 	unsigned newReserve = newCapacity * nsz;
-	*buf = realloc(*buf, newReserve);
-	return newReserve;
-}
-
-- (void) resizeMtlBuffer:(id <MTLBuffer>*)buf length:(unsigned)length
-{
-	if (*buf && length <= [*buf length])
-		return;
-
-	id<MTLBuffer> new = [_dev newBufferWithLength:length options:MTLResourceStorageModeManaged];
+	id<MTLBuffer> new = [_dev newBufferWithLength:newReserve options:MTLResourceStorageModeManaged];
 	if (*buf)
 	{
+		memcpy(new.contents, (*buf).contents, reserve);
 		[*buf setPurgeableState:MTLPurgeableStateEmpty];
 		[*buf release];
 	}
 	*buf = new;
+	return newReserve;
 }
 
 
@@ -176,7 +162,7 @@
 	return out;
 }
 
-- (void)setDrawColour:(uint32_t)colour
+- (void) setDrawColour:(uint32_t)colour
 {
 	_drawColour = colour;
 	const float mul = 1.0f / 255.0f;
@@ -187,16 +173,6 @@
 		(float)((colour & 0x000000FF)) * mul };
 }
 
-- (void) setClear:(uint32_t)colour
-{
-	const double mul = 1.0 / 255.0;
-	_passDesc.colorAttachments[0].clearColor = MTLClearColorMake(
-		(double)((colour & 0xFF000000) >> 24) * mul,
-		(double)((colour & 0x00FF0000) >> 16) * mul,
-		(double)((colour & 0x0000FF00) >>  8) * mul,
-		(double)((colour & 0x000000FF)) * mul);
-}
-
 - (void) setView:(size)viewportSize
 {
 	_viewport = (MTLViewport){
@@ -205,8 +181,10 @@
 		.znear = 1.0, .zfar = -1.0 };
 }
 
-- (void) clearVerticesAndIndices
+- (void) clear
 {
+	_passDesc.colorAttachments[0].clearColor = MTLClearColorMake(
+		_drawColourF[0], _drawColourF[1], _drawColourF[2], _drawColourF[3]);
 	_vtxListCount = 0;
 	_idxListCount = 0;
 }
@@ -215,33 +193,21 @@
 {
 	count += _vtxListCount;
 	if (count * sizeof(ShaderVertex) > _vtxListReserve)
-		_vtxListReserve = [self resizeBuffer:(void**)&_vtxList
-			itemSize:sizeof(ShaderVertex) reserveLen:_vtxListReserve requiredNum:count];
+		_vtxListReserve = [self resizeBuffer:&_vtxMtlBuffer itemSize:sizeof(ShaderVertex) requiredNum:count];
 }
 
 - (void) reserveIndices:(unsigned)count
 {
 	count += _idxListCount;
 	if (count * sizeof(uint16_t) > _idxListReserve)
-		_idxListReserve = [self resizeBuffer:(void**)&_idxList
-			itemSize:sizeof(uint16_t) reserveLen:_idxListReserve requiredNum:count];
+		_idxListReserve = [self resizeBuffer:&_idxMtlBuffer itemSize:sizeof(uint16_t) requiredNum:count];
 }
 
-- (uint16_t) queueVertex:(int)x :(int)y
+- (uint16_t) queueVertex:(float)x :(float)y
 {
 	if (_vtxListCount * sizeof(ShaderVertex) >= _vtxListReserve)
 		[self reserveVertices:1];
-	_vtxList[_vtxListCount] = (ShaderVertex){
-		.position = { (float)x, (float)y },
-		.colour = _drawColourF };
-	return _vtxListCount++;
-}
-
-- (uint16_t) queueVertexF:(float)x :(float)y
-{
-	if (_vtxListCount * sizeof(ShaderVertex) >= _vtxListReserve)
-		[self reserveVertices:1];
-	_vtxList[_vtxListCount] = (ShaderVertex){
+	((ShaderVertex*)_vtxMtlBuffer.contents)[_vtxListCount] = (ShaderVertex){
 		.position = { x, y },
 		.colour = _drawColourF };
 	return _vtxListCount++;
@@ -251,7 +217,7 @@
 {
 	if (_idxListCount * sizeof(uint16_t) >= _idxListReserve)
 		[self reserveIndices:1];
-	_idxList[_idxListCount++] = idx;
+	((uint16_t*)_idxMtlBuffer.contents)[_idxListCount++] = idx;
 	return idx;
 }
 
@@ -259,27 +225,15 @@
 {
 	if ((_idxListCount + count) * sizeof(uint16_t) >= _idxListReserve)
 		[self reserveIndices:count];
-	memcpy(&_idxList[_idxListCount], idcs, count * sizeof(uint16_t));
+	memcpy(&((uint16_t*)_idxMtlBuffer.contents)[_idxListCount], idcs, count * sizeof(uint16_t));
 	_idxListCount += count;
 }
 
 - (void) present
 {
-	// Create or recreate buffers if needed & fill with data
-	if (_vtxListCount)
-	{
-		unsigned copyLen = _vtxListCount * sizeof(ShaderVertex);
-		if (_vtxMtlBuffer == nil || [_vtxMtlBuffer length] < copyLen)
-			[self resizeMtlBuffer:&_vtxMtlBuffer length:_vtxListReserve];
-		memcpy(_vtxMtlBuffer.contents, _vtxList, copyLen);
-	}
-	if (_idxListCount)
-	{
-		unsigned copyLen = _idxListCount * sizeof(uint16_t);
-		if (_idxMtlBuffer == nil || [_idxMtlBuffer length] < copyLen)
-			[self resizeMtlBuffer:&_idxMtlBuffer length:_idxListReserve];
-		memcpy(_idxMtlBuffer.contents, _idxList, copyLen);
-	}
+	// Synchronise buffers
+	[_vtxMtlBuffer didModifyRange:(NSRange){ .location = 0, .length = _vtxListCount * sizeof(ShaderVertex) }];
+	[_idxMtlBuffer didModifyRange:(NSRange){ .location = 0, .length = _idxListCount * sizeof(uint16_t) }];
 
 	@autoreleasepool
 	{
@@ -293,7 +247,7 @@
 		[enc setCullMode:MTLCullModeNone];
 		[enc setRenderPipelineState:_pso];
 
-		if (_vtxMtlBuffer != nil && _idxMtlBuffer != nil)
+		if (_vtxMtlBuffer && _idxMtlBuffer)
 		{
 			[enc setVertexBuffer:_vtxMtlBuffer offset:0 atIndex:ShaderInputIdxVerticies];
 			const vector_float2 viewportScale = { (float)(1.0 / _viewport.width), (float)(1.0 / _viewport.height) };
@@ -301,13 +255,14 @@
 			[enc drawIndexedPrimitives:MTLPrimitiveTypeLine
 				indexCount:_idxListCount indexType:MTLIndexTypeUInt16
 				indexBuffer:_idxMtlBuffer indexBufferOffset:0];
+
+			_vtxListCount = 0;
+			_idxListCount = 0;
 		}
 
 		[enc endEncoding];
 		[cmdBuf presentDrawable:rt];
 		[cmdBuf commit];
-
-		[self clearVerticesAndIndices];
 	}
 }
 
@@ -354,8 +309,7 @@ void SetDrawColour(uint32_t c)
 
 void DrawClear(void)
 {
-	[renderer setClear:renderer.drawColour];
-	[renderer clearVerticesAndIndices];
+	[renderer clear];
 }
 
 
@@ -368,10 +322,13 @@ void DrawPoint(int x, int y)
 void DrawRect(int x, int y, int w, int h)
 {
 	[renderer reserveVertices:4];
-	uint16_t i00 = [renderer queueVertex:x     :y];
-	uint16_t i10 = [renderer queueVertex:x + w :y];
-	uint16_t i11 = [renderer queueVertex:x + w :y + h];
-	uint16_t i01 = [renderer queueVertex:x     :y + h];
+	vector_float2
+		f00 = { x, y }, f10 = { x + w, y },
+		f01 = { x, y + h}, f11 = { x + w, y + h };
+	uint16_t i00 = [renderer queueVertex:f00[0] :f00[1]];
+	uint16_t i10 = [renderer queueVertex:f10[0] :f10[1]];
+	uint16_t i11 = [renderer queueVertex:f11[0] :f11[1]];
+	uint16_t i01 = [renderer queueVertex:f01[0] :f01[1]];
 	uint16_t indices[] = { i00, i10, i10, i11, i11, i01, i01, i00 };
 	[renderer queueIndices:indices count:sizeof(indices) / sizeof(uint16_t)];
 }
@@ -393,11 +350,11 @@ void DrawCircleSteps(int x, int y, int r, int steps)
 	// Draw whole circle in a single loop
 	[renderer reserveVertices:steps];
 	[renderer reserveIndices:steps * 2];
-	uint16_t base = [renderer queueIndex:[renderer queueVertex:x + r :y]];
+	uint16_t base = [renderer queueIndex:[renderer queueVertex:fx + mag :fy]];
 	for (int i = 1; i < steps; ++i)
 	{
 		const float theta = stepSz * (float)i;
-		uint16_t ii = [renderer queueVertexF:fx + cosf(theta) * mag :fy + sinf(theta) * mag];
+		uint16_t ii = [renderer queueVertex:fx + cosf(theta) * mag :fy + sinf(theta) * mag];
 		[renderer queueIndices:(uint16_t[]){ ii, ii } count:2];
 	}
 	[renderer queueIndex:base];
@@ -413,11 +370,11 @@ void DrawArcSteps(int x, int y, int r, int startAng, int endAng, int steps)
 	const float stepSz = (float)(endAng - startAng) / (float)abs(steps) * (float)DEG2RAD;
 	[renderer reserveVertices:steps];
 	[renderer reserveIndices:steps * 2];
-	uint16_t ii = [renderer queueVertexF:fx + cosf(start) * magw :fy - sinf(start) * magh];
+	uint16_t ii = [renderer queueVertex:fx + cosf(start) * magw :fy - sinf(start) * magh];
 	for (int i = 1; i <= steps; ++i)
 	{
 		const float theta = start + stepSz * (float)i;
-		uint16_t iii = [renderer queueVertexF:fx + cosf(theta) * magw :fy - sinf(theta) * magh];
+		uint16_t iii = [renderer queueVertex:fx + cosf(theta) * magw :fy - sinf(theta) * magh];
 		[renderer queueIndices:(uint16_t[]){ ii, iii } count:2];
 		ii = iii;
 	}
