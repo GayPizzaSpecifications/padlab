@@ -1,4 +1,4 @@
-Copyright (C) 2019-2022 a dinosaur & Gay Pizza Specifications
+Copyright (C) 2019-2023 a dinosaur & Gay Pizza Specifications
 
 This software is provided 'as-is', without any express or implied
 warranty.  In no event will the authors be held liable for any damages
