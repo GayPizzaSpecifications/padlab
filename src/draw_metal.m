@@ -1,6 +1,6 @@
 #include "draw.h"
-#include "metalShader.h"
 #include "metal_shader_types.h"
+#include "metalShader.h"
 #include "maths.h"
 #include <SDL_metal.h>
 
@@ -33,7 +33,7 @@
 @end
 
 #define DRAWLIST_CHUNK_SIZE 480
-#define DRAWLIST_INIT_SIZE (DRAWLIST_CHUNK_SIZE)
+#define DRAWLIST_INIT_SIZE (DRAWLIST_CHUNK_SIZE * 3)
 
 @implementation MetalRenderer
 {
@@ -43,7 +43,7 @@
 	CAMetalLayer* _layer;
 	id<MTLCommandQueue> _queue;
 	MTLRenderPassDescriptor* _passDesc;
-	id<MTLRenderPipelineState> _pso; // gonna fine u on the belgrave & lillydale line
+	id<MTLRenderPipelineState> _pso;
 	MTLViewport _viewport;
 	vector_float4 _drawColourF;
 
@@ -74,9 +74,11 @@
 
 	// Get Metal device
 #if 1
+	// Default device
 	_dev = MTLCreateSystemDefaultDevice();
 	fprintf(stderr, "Default MTL device \"%s\"\n", [_dev.name UTF8String]);
 #else
+	// Non-low power device
 	NSArray<id<MTLDevice>>* devices = MTLCopyAllDevices();
 	for (id<MTLDevice> i in devices)
 	{
@@ -98,13 +100,13 @@
 	_passDesc.colorAttachments[0].storeAction = MTLStoreActionStore;
 	[self setClear:self.drawColour]; // passDesc.colorAttachments[0].clearColor = curColour
 
-	// Compile shady bois
-	__autoreleasing NSError* booboo = nil;
+	// Compile shaders
+	__autoreleasing NSError* err = nil;
 	dispatch_data_t shaderData = dispatch_data_create(shader_metallib, SHADER_METALLIB_SIZE, nil, nil);
-	id<MTLLibrary> lib = [_dev newLibraryWithData:shaderData error:&booboo];
+	id<MTLLibrary> lib = [_dev newLibraryWithData:shaderData error:&err];
 	if (!lib)
 	{
-		fprintf(stderr, "Metal shader compilation failed:\n%s\n", [[booboo localizedDescription] UTF8String]);
+		fprintf(stderr, "Metal shader compilation failed:\n%s\n", [[err localizedDescription] UTF8String]);
 		return nil;
 	}
 	id<MTLFunction> vertPrg = [lib newFunctionWithName:@"vertexMain"];
@@ -115,10 +117,10 @@
 	pipeDesc.vertexFunction = vertPrg;
 	pipeDesc.fragmentFunction = fragPrg;
 	pipeDesc.colorAttachments[0].pixelFormat = _layer.pixelFormat;
-	_pso = [_dev newRenderPipelineStateWithDescriptor:pipeDesc error:&booboo];
+	_pso = [_dev newRenderPipelineStateWithDescriptor:pipeDesc error:&err];
 	if (!_pso)
 	{
-		fprintf(stderr, "Your Myki has expired and u have been slapped with a $237 fine: %s\n", [[booboo localizedDescription] UTF8String]);
+		fprintf(stderr, "Pipeline state creation failed: %s\n", [[err localizedDescription] UTF8String]);
 		return nil;
 	}
 	[pipeDesc release];
@@ -149,7 +151,6 @@
 	// (Re)allocate and return new reserve size
 	unsigned newReserve = newCapacity * nsz;
 	*buf = realloc(*buf, newReserve);
-	printf("buffer %p %u -> %u\n", *buf, reserve, newReserve);
 	return newReserve;
 }
 
@@ -158,7 +159,6 @@
 	if (*buf && length <= [*buf length])
 		return;
 
-	printf("mtlBuf %p %lu -> %u\n", (void*)buf, (unsigned long)[*buf length], length);
 	id<MTLBuffer> new = [_dev newBufferWithLength:length options:MTLResourceStorageModeManaged];
 	if (*buf)
 	{
@@ -304,9 +304,8 @@
 		}
 
 		[enc endEncoding];
-		[cmdBuf presentDrawable:rt]; // u go to software premieres
-		[cmdBuf commit]; // is that linus torvolds?
-		// hear songs on pandora radiowo
+		[cmdBuf presentDrawable:rt];
+		[cmdBuf commit];
 
 		[self clearVerticesAndIndices];
 	}

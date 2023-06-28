@@ -11,8 +11,7 @@ typedef struct { float x, y; } vertex;
 enum { ATTRIB_VERTPOS, NUM_ATTRIBS };
 static const char* const attribNames[] =
 {
-	[ATTRIB_VERTPOS] = "inPos",
-//	[ATTRIB_COLOUR]  = "inColour"
+	[ATTRIB_VERTPOS] = "inPos"
 };
 
 
@@ -284,7 +283,7 @@ void SetDrawViewport(size size)
 
 
 static int drawCount = 0;
-static void FlushDrawBuffers()
+static void FlushDrawBuffers(void)
 {
 	if (!drawListCount)
 		return;
@@ -310,7 +309,7 @@ static void UnpackColour(GLfloat* out)
 	out[3] = (GLfloat)((colour & 0x000000FF)) * mul;
 }
 
-static void UpdateDrawColour()
+static void UpdateDrawColour(void)
 {
 	FlushDrawBuffers();                   // Flush anything that might still be in the buffer
 	GLfloat draw[4]; UnpackColour(draw);  // Convert packed RGBA32 to float
