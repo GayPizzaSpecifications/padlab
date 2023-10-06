@@ -17,6 +17,8 @@ function (common_setup _TARGET)
 		$<$<BOOL:${GNU}>:m>)
 	target_compile_options(${_TARGET} PRIVATE
 		$<$<BOOL:${GNU}>:-Wall -Wextra -pedantic -Wno-unused-parameter>)
+	target_link_options(${_TARGET} PRIVATE
+		$<$<PLATFORM_ID:Darwin>:-Wl,-rpath,/Library/Frameworks>)
 endfunction()
 
 add_executable(${TARGET} ${SOURCES_COMMON} ${SOURCES_SDL_RENDERER})
