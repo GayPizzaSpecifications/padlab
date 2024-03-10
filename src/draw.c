@@ -59,6 +59,9 @@ void DrawLine(int x1, int y1, int x2, int y2)
 
 void DrawCircleSteps(int x, int y, int r, int steps)
 {
+	const float fx = (float)x - 0.5f;
+	const float fy = (float)y - 0.5f;
+
 	const float stepsz = (float)TAU / steps;
 	const float mag = (float)r;
 	float lastx = mag;
@@ -69,8 +72,8 @@ void DrawCircleSteps(int x, int y, int r, int steps)
 		float ofsy = sinf(stepsz * i) * mag;
 
 		SDL_RenderLine(rend,
-			x + lastx, y + lasty,
-			x + ofsx,  y + ofsy);
+			fx + lastx, fy + lasty,
+			fx + ofsx,  fy + ofsy);
 
 		lastx = ofsx;
 		lasty = ofsy;
@@ -79,6 +82,9 @@ void DrawCircleSteps(int x, int y, int r, int steps)
 
 void DrawArcSteps(int x, int y, int r, int startAng, int endAng, int steps)
 {
+	const float fx = (float)x - 0.5f;
+	const float fy = (float)y - 0.5f;
+
 	const float fstart = (float)startAng * (float)DEG2RAD;
 	const float fstepSz = (float)(endAng - startAng) / abs(steps) * (float)DEG2RAD;
 	const float mag = (float)r;
@@ -92,8 +98,8 @@ void DrawArcSteps(int x, int y, int r, int startAng, int endAng, int steps)
 		float ofsy = -sinf(theta) * mag;
 
 		SDL_RenderLine(rend,
-			x + lastx, y + lasty,
-			x + ofsx,  y + ofsy);
+			fx + lastx, fy + lasty,
+			fx + ofsx,  fy + ofsy);
 
 		lastx = ofsx;
 		lasty = ofsy;
