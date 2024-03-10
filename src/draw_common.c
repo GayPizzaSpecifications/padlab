@@ -2,6 +2,7 @@
 #include "maths.h"
 #include <stdlib.h>
 
+
 void DrawCircle(int x, int y, int r)
 {
 	const int steps = (int)(sqrt((double)r) * 8.0);
