@@ -27,13 +27,6 @@ int InitDraw(SDL_Window* window);
 // subsystem is uninitialised.
 void QuitDraw(void);
 
-// Get the actual size of the canvas in pixels.
-//
-// Returns:
-//   size struct with 'w' and 'h' set to the width &
-//   height of the canvas in actual pixels.
-size GetDrawSizeInPixels(void);
-
 // Call on resize for backends that need manual viewport resizing.
 void SetDrawViewport(size size);
 

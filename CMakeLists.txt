@@ -1,4 +1,4 @@
-cmake_minimum_required(VERSION 3.3 FATAL_ERROR)
+cmake_minimum_required(VERSION 3.5 FATAL_ERROR)
 project(padlab C)
 set(TARGET padlab)
 
@@ -15,7 +15,7 @@ elseif (MSVC)
 	string(REPLACE "/W3" "/W4" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
 endif()
 
-find_package(SDL2 REQUIRED)
+find_package(SDL3 REQUIRED CONFIG)
 if (BUILD_OPENGL OR BUILD_OPENGL_LEGACY)
 	if (NOT DEFINED OpenGL_GL_PREFERENCE)
 		set(OpenGL_GL_PREFERENCE "GLVND")

@@ -4,7 +4,9 @@
 #include <GL/gl3w.h>
 #include <SDL_video.h>
 #include <stdbool.h>
+#include <stdlib.h>
 #include <stdio.h>
+
 
 typedef struct { float x, y; } vertex;
 
@@ -215,7 +217,9 @@ int InitDraw(SDL_Window* _window)
 	glVertexAttribPointer(ATTRIB_VERTPOS, 2, GL_FLOAT, GL_FALSE, sizeof(vertex), (GLvoid*)0);
 
 	// Reset viewport & clear
-	SetDrawViewport(GetDrawSizeInPixels());
+	size size;
+	SDL_GetWindowSizeInPixels(window, &size.w, &size.h);
+	SetDrawViewport(size);
 	glUniform4f(uColour, 1.0f, 1.0f, 1.0f, 1.0f);
 	glClearColor(0.0f, 0.0f, 0.0f, 0.0f);
 	glClear(GL_COLOR_BUFFER_BIT);
@@ -260,13 +264,6 @@ void QuitDraw(void)
 	window = NULL;
 }
 
-
-size GetDrawSizeInPixels(void)
-{
-	size out;
-	SDL_GL_GetDrawableSize(SDL_GL_GetCurrentWindow(), &out.w, &out.h);
-	return out;
-}
 
 void SetDrawViewport(size size)
 {

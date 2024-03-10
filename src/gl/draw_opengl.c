@@ -2,7 +2,9 @@
 #include "maths.h"
 #include <SDL_video.h>
 #include <SDL_opengl.h>
+#include <stdlib.h>
 #include <stdbool.h>
+
 
 static SDL_GLContext* ctx = NULL;
 static SDL_Window* window = NULL;
@@ -43,7 +45,9 @@ int InitDraw(SDL_Window* w)
 	glDisable(GL_CULL_FACE);
 	glEnable(GL_MULTISAMPLE);
 
-	SetDrawViewport(GetDrawSizeInPixels()); // Fills scaleWidth & scaleHeight
+	size size;
+	SDL_GetWindowSizeInPixels(w, &size.w, &size.h);
+	SetDrawViewport(size); // Fills scaleWidth & scaleHeight
 
 	glLineWidth(2.0f);
 
@@ -63,13 +67,6 @@ void QuitDraw(void)
 	window = NULL;
 }
 
-
-size GetDrawSizeInPixels(void)
-{
-	size out;
-	SDL_GL_GetDrawableSize(SDL_GL_GetCurrentWindow(), &out.w, &out.h);
-	return out;
-}
 
 void SetDrawViewport(size size)
 {

@@ -2,6 +2,7 @@
 #include "draw.h"
 #include "stick.h"
 #include <SDL.h>
+#include <SDL_main.h>
 #include <stdio.h>
 #include <stdbool.h>
 
@@ -9,57 +10,54 @@
 #define WINDOW_WIDTH  512
 #define WINDOW_HEIGHT 288
 
+
 static SDL_Window* window = NULL;
 static SDL_JoystickID joyid = -1;
-static SDL_GameController* pad = NULL;
+static SDL_Gamepad* pad = NULL;
 
-static bool UseGamepad(int aJoyid)
+static bool UseGamepad(SDL_JoystickID aJoyid)
 {
-	pad = SDL_GameControllerOpen(aJoyid);
-	joyid = SDL_JoystickGetDeviceInstanceID(aJoyid);
-	if (pad != NULL)
-	{
-		printf("using gamepad #%d, \"%s\"\n", aJoyid, SDL_GameControllerName(pad));
-		return true;
-	}
-	return false;
+	pad = SDL_OpenGamepad(aJoyid);
+	if (!pad)
+		return false;
+	joyid = aJoyid;
+	printf("using gamepad #%d, \"%s\"\n", aJoyid, SDL_GetGamepadName(pad));
+	return true;
 }
 
 #define FATAL(CONDITION, RETURN) if (CONDITION) { res = (RETURN); goto error; }
 int main(int argc, char** argv)
 {
-	int res;
-
-	res = SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMECONTROLLER);
+	int res = SDL_Init(SDL_INIT_VIDEO | SDL_INIT_GAMEPAD);
 	if (res < 0)
 		goto error;
 
-	const int winpos = SDL_WINDOWPOS_CENTERED;
+	int winflg = SDL_WINDOW_RESIZABLE | SDL_WINDOW_HIGH_PIXEL_DENSITY;
 #ifdef USE_OPENGL
-	const int winflg = SDL_WINDOW_RESIZABLE | SDL_WINDOW_OPENGL | SDL_WINDOW_ALLOW_HIGHDPI;
+	winflg |= SDL_WINDOW_OPENGL;
 #elif defined USE_METAL
-	const int winflg = SDL_WINDOW_RESIZABLE | SDL_WINDOW_METAL | SDL_WINDOW_ALLOW_HIGHDPI;
-#else
-	const int winflg = SDL_WINDOW_RESIZABLE | SDL_WINDOW_ALLOW_HIGHDPI;
+	winflg |= SDL_WINDOW_METAL;
 #endif
-	int winw = WINDOW_WIDTH;
-	int winh = WINDOW_HEIGHT;
+	int winw = WINDOW_WIDTH, winh = WINDOW_HEIGHT;
 	DrawWindowHints();
-	window = SDL_CreateWindow(CAPTION, winpos, winpos, winw, winh, winflg);
+	window = SDL_CreateWindow(CAPTION, winw, winh, winflg);
 	FATAL(window == NULL, -1)
 
 	FATAL(InitDraw(window), -1)
-	size rendSize = GetDrawSizeInPixels();
+	size rendSize;
+	SDL_GetWindowSizeInPixels(window, &rendSize.w, &rendSize.h);
 
-	if ((res = SDL_GameControllerAddMappingsFromFile("gamecontrollerdb.txt")) != -1)
+	if ((res = SDL_AddGamepadMappingsFromFile("gamecontrollerdb.txt")) != -1)
 		printf("read %d mappings from gamecontrollerdb.txt\n", res);
-	for (int i = 0; i < SDL_NumJoysticks(); ++i)
+
+	int numJoy;
+	SDL_JoystickID* joyIds = SDL_GetJoysticks(&numJoy);
+	if (joyIds)
 	{
-		if (SDL_IsGameController(i))
-		{
-			if (UseGamepad(i))
+		for (int i = 0; i < numJoy; ++i)
+			if (SDL_IsGamepad(joyIds[i]) || UseGamepad(joyIds[i]))
 				break;
-		}
+		SDL_free(joyIds);
 	}
 
 	vector plrpos = {10.0, 10.0};
@@ -70,13 +68,13 @@ int main(int argc, char** argv)
 	bool running = true;
 	bool repaint = true;
 	bool showavatar = false;
-	uint32_t tickslast = SDL_GetTicks();
+	uint64_t tickslast = SDL_GetTicks();
 	int side = 0;
 
 	while (running)
 	{
 		//FIXME: probably doesn't matter but this isn't very precise
-		const uint32_t ticks = SDL_GetTicks();
+		const uint64_t ticks = SDL_GetTicks();
 		const double framedelta = (double)(ticks - tickslast);
 		tickslast = ticks;
 
@@ -97,7 +95,7 @@ int main(int argc, char** argv)
 			{
 				switch (event.type)
 				{
-				case (SDL_KEYDOWN):
+				case (SDL_EVENT_KEY_DOWN):
 					if (event.key.keysym.sym == SDLK_ESCAPE)
 					{
 						running = false;
@@ -109,67 +107,65 @@ int main(int argc, char** argv)
 					}
 					break;
 
-				case (SDL_CONTROLLERBUTTONDOWN):
-					if (event.cbutton.button == SDL_CONTROLLER_BUTTON_BACK)
+				case (SDL_EVENT_GAMEPAD_BUTTON_DOWN):
+					if (event.gbutton.button == SDL_GAMEPAD_BUTTON_BACK)
 					{
 						showavatar = !showavatar;
 						repaint = true;
 					}
 					break;
 
-				case (SDL_QUIT):
+				case (SDL_EVENT_QUIT):
 					running = false;
 					break;
 
-				case (SDL_WINDOWEVENT):
-					if (event.window.event == SDL_WINDOWEVENT_SIZE_CHANGED)
+				case (SDL_EVENT_WINDOW_RESIZED):
+					winw = event.window.data1;
+					winh = event.window.data2;
+					break;
+
+				case (SDL_EVENT_WINDOW_PIXEL_SIZE_CHANGED):
+					rendSize = (size){event.window.data1, event.window.data2};
+					SetDrawViewport(rendSize);
+					repaint = true;
+					break;
+
+				case (SDL_EVENT_WINDOW_EXPOSED):
+					repaint = true;
+					break;
+
+				case (SDL_EVENT_GAMEPAD_AXIS_MOTION):
+					if (event.gaxis.which != joyid)
+						break;
+					switch (event.gaxis.axis)
 					{
-						winw = event.window.data1;
-						winh = event.window.data2;
-						rendSize = GetDrawSizeInPixels();
-						SetDrawViewport(rendSize);
-						repaint = true;
-					}
-					else if (event.window.event == SDL_WINDOWEVENT_EXPOSED)
-					{
-						repaint = true;
+					case (SDL_GAMEPAD_AXIS_LEFTX):
+						stickl.rawpos.x = (vec_t)event.gaxis.value / (vec_t)0x7FFF;
+						repaint = stickl.recalc = true;
+						break;
+					case (SDL_GAMEPAD_AXIS_LEFTY):
+						stickl.rawpos.y = (vec_t)event.gaxis.value / (vec_t)0x7FFF;
+						repaint = stickl.recalc = true;
+						break;
+					case (SDL_GAMEPAD_AXIS_RIGHTX):
+						stickr.rawpos.x = (vec_t)event.gaxis.value / (vec_t)0x7FFF;
+						repaint = stickr.recalc = true;
+						break;
+					case (SDL_GAMEPAD_AXIS_RIGHTY):
+						stickr.rawpos.y = (vec_t)event.gaxis.value / (vec_t)0x7FFF;
+						repaint = stickr.recalc = true;
+						break;
+					default:
+						break;
 					}
 					break;
 
-				case (SDL_CONTROLLERAXISMOTION):
-					if (event.caxis.which == joyid)
-					{
-						if (event.caxis.axis == SDL_CONTROLLER_AXIS_LEFTX)
-						{
-							stickl.rawpos.x = (vec_t)event.caxis.value / (vec_t)0x7FFF;
-							repaint = stickl.recalc = true;
-						}
-						else if (event.caxis.axis == SDL_CONTROLLER_AXIS_LEFTY)
-						{
-							stickl.rawpos.y = (vec_t)event.caxis.value / (vec_t)0x7FFF;
-							repaint = stickl.recalc = true;
-						}
-						else if (event.caxis.axis == SDL_CONTROLLER_AXIS_RIGHTX)
-						{
-							stickr.rawpos.x = (vec_t)event.caxis.value / (vec_t)0x7FFF;
-							repaint = stickr.recalc = true;
-						}
-						else if (event.caxis.axis == SDL_CONTROLLER_AXIS_RIGHTY)
-						{
-							stickr.rawpos.y = (vec_t)event.caxis.value / (vec_t)0x7FFF;
-							repaint = stickr.recalc = true;
-						}
-					}
-					break;
-
-				case (SDL_MOUSEBUTTONDOWN):
-					if (event.button.state & (SDL_BUTTON_LMASK | SDL_BUTTON_RMASK ))
-					{
+				case (SDL_EVENT_MOUSE_BUTTON_DOWN):
+					if (event.button.state & (SDL_BUTTON_LMASK | SDL_BUTTON_RMASK))
 						side = (event.button.x > winw / 2) ? 1 : 0;
-					}
 					break;
 
-				case (SDL_MOUSEMOTION):
+				case (SDL_EVENT_MOUSE_MOTION):
 					if (event.motion.state & SDL_BUTTON_LMASK)
 					{
 						const double hwinw = winw / 2.0;
@@ -203,15 +199,15 @@ int main(int argc, char** argv)
 					}
 					break;
 
-				case (SDL_CONTROLLERDEVICEADDED):
+				case (SDL_EVENT_GAMEPAD_ADDED):
 					if (pad == NULL)
-						UseGamepad(event.cdevice.which);
+						UseGamepad(event.gdevice.which);
 					break;
 
-				case (SDL_CONTROLLERDEVICEREMOVED):
-					if (pad != NULL && event.cdevice.which == joyid)
+				case (SDL_EVENT_GAMEPAD_REMOVED):
+					if (pad != NULL && event.gdevice.which == joyid)
 					{
-						SDL_GameControllerClose(pad);
+						SDL_CloseGamepad(pad);
 						pad = NULL;
 						printf("active gamepad was removed\n");
 					}
@@ -258,7 +254,7 @@ int main(int argc, char** argv)
 
 	res = 0;
 error:
-	SDL_GameControllerClose(pad);
+	SDL_CloseGamepad(pad);
 	QuitDraw();
 	SDL_DestroyWindow(window);
 	SDL_Quit();

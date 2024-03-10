@@ -11,14 +11,15 @@ set(SOURCES_OPENGL glcore/draw_opengl_core.c)
 set(SOURCES_OPENGL_LEGACY gl/draw_opengl.c)
 
 function (common_setup _TARGET)
-	target_link_libraries(${_TARGET}
-		$<$<PLATFORM_ID:Windows>:SDL2::SDL2main>
-		SDL2::SDL2
-		$<$<BOOL:${GNU}>:m>)
+	target_link_libraries(${_TARGET} SDL3::SDL3 $<$<BOOL:${GNU}>:m>)
 	target_compile_options(${_TARGET} PRIVATE
 		$<$<BOOL:${GNU}>:-Wall -Wextra -pedantic -Wno-unused-parameter>)
-	target_link_options(${_TARGET} PRIVATE
-		$<$<PLATFORM_ID:Darwin>:-Wl,-rpath,/Library/Frameworks>)
+	if (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+		get_property(SDL3_IMPORTED_LOCATION TARGET SDL3::SDL3 PROPERTY IMPORTED_LOCATION)
+		if (SDL3_IMPORTED_LOCATION MATCHES "^/Library/Frameworks/")
+			target_link_options(${_TARGET} PRIVATE -Wl,-rpath,/Library/Frameworks)
+		endif()
+	endif()
 endfunction()
 
 add_executable(${TARGET} ${SOURCES_COMMON} ${SOURCES_SDL_RENDERER})

@@ -7,6 +7,9 @@
 #import <Metal/Metal.h>
 #import <QuartzCore/CAMetalLayer.h>
 
+#define DRAWLIST_CHUNK_SIZE 480
+#define DRAWLIST_INIT_SIZE (DRAWLIST_CHUNK_SIZE * 3)
+
 
 @interface MetalRenderer : NSObject
 
@@ -15,9 +18,8 @@
 - (id) init:(SDL_Window*)window;
 - (void) dealloc;
 
-- (unsigned) resizeBuffer:(id <MTLBuffer>*)buf itemSize:(unsigned)nsz requiredNum:(unsigned)count;
+- (NSUInteger) resizeBuffer:(id <MTLBuffer>*)buf itemSize:(unsigned)nsz requiredNum:(unsigned)count;
 
-- (size) getDrawSize;
 - (void) setView:(size)viewportSize;
 - (void) clear;
 - (void) reserveVertices:(unsigned)count;
@@ -28,9 +30,6 @@
 - (void) present;
 
 @end
-
-#define DRAWLIST_CHUNK_SIZE 480
-#define DRAWLIST_INIT_SIZE (DRAWLIST_CHUNK_SIZE * 3)
 
 @implementation MetalRenderer
 {
@@ -44,7 +43,8 @@
 	MTLViewport _viewport;
 	vector_float4 _drawColourF;
 
-	unsigned _vtxListCount, _vtxListReserve, _idxListCount, _idxListReserve;
+	unsigned _vtxListCount, _idxListCount;
+	NSUInteger _vtxListReserve, _idxListReserve;
 	id<MTLBuffer> _vtxMtlBuffer, _idxMtlBuffer;
 }
 
@@ -54,10 +54,8 @@
 		return nil;
 
 	self.drawColour = BLACK;
-	_vtxListReserve = 0;
-	_idxListReserve = 0;
-	_vtxMtlBuffer = nil;
-	_idxMtlBuffer = nil;
+	_vtxListReserve = _idxListReserve = 0;
+	_vtxMtlBuffer = _idxMtlBuffer = nil;
 
 	// Create Metal view
 	_window = window;
@@ -117,7 +115,9 @@
 	[pipeDesc release];
 
 	// Set viewport
-	[self setView:[self getDrawSize]];
+	size size;
+	SDL_GetWindowSizeInPixels(_window, &size.w, &size.h);
+	[self setView:size];
 
 	return self;
 }
@@ -129,12 +129,11 @@
 }
 
 
-- (unsigned) resizeBuffer:(id <MTLBuffer>*)buf itemSize:(unsigned)nsz requiredNum:(unsigned)count
+- (NSUInteger) resizeBuffer:(id <MTLBuffer>*)buf itemSize:(unsigned)nsz requiredNum:(unsigned)count
 {
-	unsigned reserve;
-	if (*buf)
-		if (count * nsz <= (reserve = [*buf length]))
-			return reserve;
+	NSUInteger reserve;
+	if (*buf && count * nsz <= (reserve = [*buf length]))
+		return reserve;
 
 	// Calculate new capacity
 	unsigned newCapacity = (count + DRAWLIST_CHUNK_SIZE - 1) / DRAWLIST_CHUNK_SIZE * DRAWLIST_CHUNK_SIZE;
@@ -154,13 +153,6 @@
 	return newReserve;
 }
 
-
-- (size) getDrawSize
-{
-	size out;
-	SDL_Metal_GetDrawableSize(_window, &out.w, &out.h);
-	return out;
-}
 
 - (void) setDrawColour:(uint32_t)colour
 {
@@ -282,42 +274,30 @@ int InitDraw(SDL_Window* window)
 	return 0;
 }
 
-
 void QuitDraw(void)
 {
 	[renderer release];
 }
-
-
-size GetDrawSizeInPixels(void)
-{
-	return renderer ? [renderer getDrawSize] : (size){ 0, 0 };
-}
-
 
 void SetDrawViewport(size size)
 {
 	[renderer setView:size];
 }
 
-
 void SetDrawColour(uint32_t c)
 {
 	renderer.drawColour = c;
 }
-
 
 void DrawClear(void)
 {
 	[renderer clear];
 }
 
-
 void DrawPoint(int x, int y)
 {
 	DrawCircleSteps(x, y, 1, 4);
 }
-
 
 void DrawRect(int x, int y, int w, int h)
 {
@@ -333,13 +313,11 @@ void DrawRect(int x, int y, int w, int h)
 	[renderer queueIndices:indices count:sizeof(indices) / sizeof(uint16_t)];
 }
 
-
 void DrawLine(int x1, int y1, int x2, int y2)
 {
 	[renderer queueIndex:[renderer queueVertex:x1 :y1]];
 	[renderer queueIndex:[renderer queueVertex:x2 :y2]];
 }
-
 
 void DrawCircleSteps(int x, int y, int r, int steps)
 {
@@ -359,7 +337,6 @@ void DrawCircleSteps(int x, int y, int r, int steps)
 	}
 	[renderer queueIndex:base];
 }
-
 
 void DrawArcSteps(int x, int y, int r, int startAng, int endAng, int steps)
 {
