@@ -7,11 +7,7 @@ option(BUILD_METAL "Build executable using Metal for drawing (WIP)" ${APPLE})
 option(BUILD_OPENGL "Build OpenGL 3.3 core profile executable (WIP)" OFF)
 
 list(APPEND CMAKE_MODULE_PATH "${CMAKE_SOURCE_DIR}/cmake")
-set(CMAKE_C_STANDARD 99)
-set(GNU_COMPILERS GNU Clang AppleClang)
-if (CMAKE_C_COMPILER_ID IN_LIST GNU_COMPILERS)
-	set(GNU 1)
-elseif (MSVC)
+if (CMAKE_GENERATOR MATCHES "Visual Studio")
 	string(REPLACE "/W3" "/W4" CMAKE_C_FLAGS "${CMAKE_C_FLAGS}")
 endif()
 

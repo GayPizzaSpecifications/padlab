@@ -11,9 +11,13 @@ set(SOURCES_OPENGL glcore/draw_opengl_core.c)
 set(SOURCES_OPENGL_LEGACY gl/draw_opengl.c)
 
 function (common_setup _TARGET)
-	target_link_libraries(${_TARGET} SDL3::SDL3 $<$<BOOL:${GNU}>:m>)
+	set_target_properties(${_TARGET} PROPERTIES
+		C_STANDARD 99
+		WIN32_EXECUTABLE ON)
+	set(GNU $<OR:$<C_COMPILER_ID:GNU>,$<C_COMPILER_ID:Clang>,$<C_COMPILER_ID:AppleClang>>)
+	target_link_libraries(${_TARGET} SDL3::SDL3 $<${GNU}:m>)
 	target_compile_options(${_TARGET} PRIVATE
-		$<$<BOOL:${GNU}>:-Wall -Wextra -pedantic -Wno-unused-parameter>)
+		$<${GNU}:-Wall -Wextra -pedantic -Wno-unused-parameter>)
 	if (CMAKE_SYSTEM_NAME STREQUAL "Darwin")
 		get_property(SDL3_IMPORTED_LOCATION TARGET SDL3::SDL3 PROPERTY IMPORTED_LOCATION)
 		if (SDL3_IMPORTED_LOCATION MATCHES "^/Library/Frameworks/")
@@ -61,4 +65,8 @@ if (BUILD_OPENGL_LEGACY)
 	target_link_libraries(${TARGET}_gl OpenGL::GL)
 	target_compile_definitions(${TARGET}_gl PRIVATE USE_OPENGL)
 	common_setup(${TARGET}_gl)
+endif()
+
+if (CMAKE_GENERATOR MATCHES "Visual Studio")
+	set_property(DIRECTORY ${CMAKE_SOURCE_DIR} PROPERTY VS_STARTUP_PROJECT ${TARGET})
 endif()
