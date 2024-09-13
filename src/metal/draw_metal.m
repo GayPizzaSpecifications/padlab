@@ -42,10 +42,12 @@
 	id<MTLRenderPipelineState> _pso;
 	MTLViewport _viewport;
 	vector_float4 _drawColourF;
+	dispatch_semaphore_t _inFlightSemaphore;
 
-	unsigned _vtxListCount, _idxListCount;
-	NSUInteger _vtxListReserve, _idxListReserve;
-	id<MTLBuffer> _vtxMtlBuffer, _idxMtlBuffer;
+	unsigned _vtxListCount[3], _idxListCount[3];
+	NSUInteger _vtxListReserve[3], _idxListReserve[3];
+	id<MTLBuffer> _vtxMtlBuffer[3], _idxMtlBuffer[3], *_vtxFront, *_idxFront;
+	int _frame;
 }
 
 - (id) init:(SDL_Window*)window
@@ -54,8 +56,13 @@
 		return nil;
 
 	self.drawColour = BLACK;
-	_vtxListReserve = _idxListReserve = 0;
-	_vtxMtlBuffer = _idxMtlBuffer = nil;
+	_vtxListReserve[0] = _vtxListReserve[1] = _vtxListReserve[2] = 0;
+	_idxListReserve[0] = _idxListReserve[1] = _idxListReserve[2] = 0;
+	_vtxMtlBuffer[0] = _vtxMtlBuffer[1] = _vtxMtlBuffer[2] = nil;
+	_idxMtlBuffer[0] = _idxMtlBuffer[1] = _idxMtlBuffer[2] = nil;
+	_vtxFront = &_vtxMtlBuffer[0];
+	_idxFront = &_idxMtlBuffer[0];
+	_frame = 0;
 
 	// Create Metal view
 	_window = window;
@@ -119,6 +126,9 @@
 	SDL_GetWindowSizeInPixels(_window, &size.w, &size.h);
 	[self setView:size];
 
+	// Allow up to 3 frames in-flight
+	_inFlightSemaphore = dispatch_semaphore_create(3);
+
 	return self;
 }
 
@@ -177,55 +187,57 @@
 {
 	_passDesc.colorAttachments[0].clearColor = MTLClearColorMake(
 		_drawColourF[0], _drawColourF[1], _drawColourF[2], _drawColourF[3]);
-	_vtxListCount = 0;
-	_idxListCount = 0;
+	_vtxListCount[_frame] = 0;
+	_idxListCount[_frame] = 0;
 }
 
 - (void) reserveVertices:(unsigned)count
 {
-	count += _vtxListCount;
-	if (count * sizeof(ShaderVertex) > _vtxListReserve)
-		_vtxListReserve = [self resizeBuffer:&_vtxMtlBuffer itemSize:sizeof(ShaderVertex) requiredNum:count];
+	count += _vtxListCount[_frame];
+	if (count * sizeof(ShaderVertex) > _vtxListReserve[_frame])
+		_vtxListReserve[_frame] = [self resizeBuffer:_vtxFront itemSize:sizeof(ShaderVertex) requiredNum:count];
 }
 
 - (void) reserveIndices:(unsigned)count
 {
-	count += _idxListCount;
-	if (count * sizeof(uint16_t) > _idxListReserve)
-		_idxListReserve = [self resizeBuffer:&_idxMtlBuffer itemSize:sizeof(uint16_t) requiredNum:count];
+	count += _idxListCount[_frame];
+	if (count * sizeof(uint16_t) > _idxListReserve[_frame])
+		_idxListReserve[_frame] = [self resizeBuffer:_idxFront itemSize:sizeof(uint16_t) requiredNum:count];
 }
 
 - (uint16_t) queueVertex:(float)x :(float)y
 {
-	if (_vtxListCount * sizeof(ShaderVertex) >= _vtxListReserve)
+	if (_vtxListCount[_frame] * sizeof(ShaderVertex) >= _vtxListReserve[_frame])
 		[self reserveVertices:1];
-	((ShaderVertex*)_vtxMtlBuffer.contents)[_vtxListCount] = (ShaderVertex){
+	((ShaderVertex*)(*_vtxFront).contents)[_vtxListCount[_frame]] = (ShaderVertex){
 		.position = { x, y },
 		.colour = _drawColourF };
-	return _vtxListCount++;
+	return _vtxListCount[_frame]++;
 }
 
 - (uint16_t) queueIndex:(uint16_t)idx
 {
-	if (_idxListCount * sizeof(uint16_t) >= _idxListReserve)
+	if (_idxListCount[_frame] * sizeof(uint16_t) >= _idxListReserve[_frame])
 		[self reserveIndices:1];
-	((uint16_t*)_idxMtlBuffer.contents)[_idxListCount++] = idx;
+	((uint16_t*)(*_idxFront).contents)[_idxListCount[_frame]++] = idx;
 	return idx;
 }
 
 - (void) queueIndices:(uint16_t*)idcs count:(unsigned)count
 {
-	if ((_idxListCount + count) * sizeof(uint16_t) >= _idxListReserve)
+	if ((_idxListCount[_frame] + count) * sizeof(uint16_t) >= _idxListReserve[_frame])
 		[self reserveIndices:count];
-	memcpy(&((uint16_t*)_idxMtlBuffer.contents)[_idxListCount], idcs, count * sizeof(uint16_t));
-	_idxListCount += count;
+	memcpy(&((uint16_t*)(*_idxFront).contents)[_idxListCount[_frame]], idcs, count * sizeof(uint16_t));
+	_idxListCount[_frame] += count;
 }
 
 - (void) present
 {
+	dispatch_semaphore_wait(_inFlightSemaphore, DISPATCH_TIME_FOREVER);
+
 	// Synchronise buffers
-	[_vtxMtlBuffer didModifyRange:(NSRange){ .location = 0, .length = _vtxListCount * sizeof(ShaderVertex) }];
-	[_idxMtlBuffer didModifyRange:(NSRange){ .location = 0, .length = _idxListCount * sizeof(uint16_t) }];
+	[*_vtxFront didModifyRange:(NSRange){ .location = 0, .length = _vtxListCount[_frame] * sizeof(ShaderVertex) }];
+	[*_idxFront didModifyRange:(NSRange){ .location = 0, .length = _idxListCount[_frame] * sizeof(uint16_t) }];
 
 	@autoreleasepool
 	{
@@ -233,29 +245,38 @@
 		_passDesc.colorAttachments[0].texture = rt.texture;
 
 		id<MTLCommandBuffer> cmdBuf = [_queue commandBuffer];
+		[cmdBuf addCompletedHandler:^(id<MTLCommandBuffer> _Nonnull _)
+		{
+			dispatch_semaphore_signal(_inFlightSemaphore);
+		}];
+
 		id<MTLRenderCommandEncoder> enc = [cmdBuf renderCommandEncoderWithDescriptor:_passDesc];
 
 		[enc setViewport:_viewport];
 		[enc setCullMode:MTLCullModeNone];
 		[enc setRenderPipelineState:_pso];
 
-		if (_vtxMtlBuffer && _idxMtlBuffer)
+		if (*_vtxFront && *_idxFront)
 		{
-			[enc setVertexBuffer:_vtxMtlBuffer offset:0 atIndex:ShaderInputIdxVerticies];
+			[enc setVertexBuffer:*_vtxFront offset:0 atIndex:ShaderInputIdxVerticies];
 			const vector_float2 viewportScale = { (float)(1.0 / _viewport.width), (float)(1.0 / _viewport.height) };
 			[enc setVertexBytes:&viewportScale length:sizeof(vector_float2) atIndex:ShaderInputViewportScale];
 			[enc drawIndexedPrimitives:MTLPrimitiveTypeLine
-				indexCount:_idxListCount indexType:MTLIndexTypeUInt16
-				indexBuffer:_idxMtlBuffer indexBufferOffset:0];
+				indexCount:_idxListCount[_frame] indexType:MTLIndexTypeUInt16
+				indexBuffer:*_idxFront indexBufferOffset:0];
 
-			_vtxListCount = 0;
-			_idxListCount = 0;
+			_vtxListCount[_frame] = _idxListCount[_frame] = 0;
 		}
 
 		[enc endEncoding];
 		[cmdBuf presentDrawable:rt];
 		[cmdBuf commit];
 	}
+
+	if (++_frame == 3)
+		_frame = 0;
+	_vtxFront = &_vtxMtlBuffer[_frame];
+	_idxFront = &_idxMtlBuffer[_frame];
 }
 
 @end
@@ -304,7 +325,7 @@ void DrawRect(int x, int y, int w, int h)
 	[renderer reserveVertices:4];
 	vector_float2
 		f00 = { x, y }, f10 = { x + w, y },
-		f01 = { x, y + h}, f11 = { x + w, y + h };
+		f01 = { x, y + h }, f11 = { x + w, y + h };
 	uint16_t i00 = [renderer queueVertex:f00[0] :f00[1]];
 	uint16_t i10 = [renderer queueVertex:f10[0] :f10[1]];
 	uint16_t i11 = [renderer queueVertex:f11[0] :f11[1]];

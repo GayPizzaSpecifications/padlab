@@ -4,5 +4,6 @@
 cmake-build-*/
 build/
 out/
+xcode/
 
 .DS_Store
