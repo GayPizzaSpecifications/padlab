@@ -2,7 +2,7 @@
 #include "metal_shader_types.h"
 #include "metalShader.h"
 #include "maths.h"
-#include <SDL_metal.h>
+#include <SDL3/SDL_metal.h>
 
 #import <Metal/Metal.h>
 #import <QuartzCore/CAMetalLayer.h>

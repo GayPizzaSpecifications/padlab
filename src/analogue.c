@@ -1,8 +1,8 @@
 #include "maths.h"
 #include "draw.h"
 #include "stick.h"
-#include <SDL.h>
-#include <SDL_main.h>
+#include <SDL3/SDL.h>
+#include <SDL3/SDL_main.h>
 #include <stdio.h>
 #include <stdbool.h>
 
@@ -82,9 +82,9 @@ int SDL_AppEvent(const SDL_Event* event)
 	switch (event->type)
 	{
 	case (SDL_EVENT_KEY_DOWN):
-		if (event->key.keysym.sym == SDLK_ESCAPE)
+		if (event->key.key == SDLK_ESCAPE)
 			return 1;
-		if (event->key.keysym.sym == SDLK_e)
+		if (event->key.key == SDLK_E)
 		{
 			showavatar = !showavatar;
 			repaint = true;
@@ -144,7 +144,7 @@ int SDL_AppEvent(const SDL_Event* event)
 		return 0;
 
 	case (SDL_EVENT_MOUSE_BUTTON_DOWN):
-		if (event->button.state & (SDL_BUTTON_LMASK | SDL_BUTTON_RMASK))
+		if (SDL_BUTTON(event->button.button) & (SDL_BUTTON_LMASK | SDL_BUTTON_RMASK))
 			side = (event->button.x > winw / 2) ? 1 : 0;
 		return 0;
 
