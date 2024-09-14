@@ -68,7 +68,7 @@ int SDL_AppInit(int argc, char* argv[])
 	InitDefaults(&stickl);
 	InitDefaults(&stickr);
 
-	tickslast = SDL_GetTicks();
+	tickslast = SDL_GetTicksNS();
 
 	return 0;
 }
@@ -203,9 +203,8 @@ int SDL_AppEvent(const SDL_Event* event)
 
 int SDL_AppIterate(void)
 {
-	//FIXME: probably doesn't matter but this isn't very precise
-	const Uint64 ticks = SDL_GetTicks();
-	const double framedelta = (double)(ticks - tickslast);
+	const Uint64 ticks = SDL_GetTicksNS();
+	const double framedelta = (double)(ticks - tickslast) / 1000000000.0;
 	tickslast = ticks;
 
 	if (!repaint)
@@ -225,7 +224,7 @@ int SDL_AppIterate(void)
 		const int plrSz = 32;
 		const int hplrSz = plrSz / 2;
 
-		plrpos = VecAdd(plrpos, VecScale(stickl.compos, framedelta * 0.5));
+		plrpos = VecAdd(plrpos, VecScale(stickl.compos, framedelta * 500.0));
 		plrpos.x = pfmod(plrpos.x + hplrSz, rendSize.w + plrSz) - hplrSz;
 		plrpos.y = pfmod(plrpos.y + hplrSz, rendSize.h + plrSz) - hplrSz;
 
