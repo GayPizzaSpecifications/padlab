@@ -2,7 +2,7 @@
 #include "glslShaders.h"
 #include "maths.h"
 #include <GL/gl3w.h>
-#include <SDL_video.h>
+#include <SDL3/SDL_video.h>
 #include <stdbool.h>
 #include <stdlib.h>
 #include <stdio.h>
@@ -20,7 +20,7 @@ static const char* const attribNames[] =
 #define OPENGL_VERSION_MAJOR 3
 #define OPENGL_VERSION_MINOR 3
 
-static SDL_GLContext* ctx = NULL;
+static SDL_GLContext ctx  = NULL;
 static SDL_Window* window = NULL;
 static uint32_t
 	colour     = 0x00000000,
@@ -133,7 +133,7 @@ int InitDraw(SDL_Window* _window)
 {
 	window = _window;
 	ctx = SDL_GL_CreateContext(window);
-	if (ctx == NULL || window == NULL || SDL_GL_MakeCurrent(window, ctx))
+	if (ctx == NULL || window == NULL || !SDL_GL_MakeCurrent(window, ctx))
 	{
 		fprintf(stderr, "%s\n", SDL_GetError());
 		return -1;
@@ -259,7 +259,7 @@ void QuitDraw(void)
 	}
 
 	SDL_GL_MakeCurrent(window, NULL);
-	SDL_GL_DeleteContext(ctx);
+	SDL_GL_DestroyContext(ctx);
 	ctx = NULL;
 	window = NULL;
 }

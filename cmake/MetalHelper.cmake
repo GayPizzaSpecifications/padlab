@@ -1,4 +1,4 @@
-include(CMakeParseArguments) # 3.4 and lower compatibility
+include(CMakeParseArguments)  # 3.4 and lower compatibility
 
 function (_xrun_find_program OUTPUT NAME)
 	find_program(XCRUN_EXECUTABLE xcrun REQUIRED)

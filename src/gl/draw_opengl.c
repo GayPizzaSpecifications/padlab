@@ -1,12 +1,12 @@
 #include "draw.h"
 #include "maths.h"
-#include <SDL_video.h>
-#include <SDL_opengl.h>
+#include <SDL3/SDL_video.h>
+#include <SDL3/SDL_opengl.h>
 #include <stdlib.h>
 #include <stdbool.h>
 
 
-static SDL_GLContext* ctx = NULL;
+static SDL_GLContext ctx  = NULL;
 static SDL_Window* window = NULL;
 static uint32_t colour    = 0x00000000;
 static uint32_t clrColour = 0x00000000;
@@ -62,7 +62,7 @@ int InitDraw(SDL_Window* w)
 
 void QuitDraw(void)
 {
-	SDL_GL_DeleteContext(ctx);
+	SDL_GL_DestroyContext(ctx);
 	ctx = NULL;
 	window = NULL;
 }

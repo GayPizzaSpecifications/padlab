@@ -144,7 +144,7 @@ int SDL_AppEvent(const SDL_Event* event)
 		return 0;
 
 	case (SDL_EVENT_MOUSE_BUTTON_DOWN):
-		if (SDL_BUTTON(event->button.button) & (SDL_BUTTON_LMASK | SDL_BUTTON_RMASK))
+		if (SDL_BUTTON_MASK(event->button.button) & (SDL_BUTTON_LMASK | SDL_BUTTON_RMASK))
 			side = (event->button.x > winw / 2) ? 1 : 0;
 		return 0;
 

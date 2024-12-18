@@ -1,6 +1,6 @@
 #include "draw.h"
 #include "maths.h"
-#include <SDL_render.h>
+#include <SDL3/SDL_render.h>
 #include <stdlib.h>
 
 
@@ -10,8 +10,8 @@ void DrawWindowHints(void) {}
 
 int InitDraw(SDL_Window* window)
 {
-	const int rendflags = SDL_RENDERER_PRESENTVSYNC;
-	rend = SDL_CreateRenderer(window, NULL, rendflags);
+	rend = SDL_CreateRenderer(window, NULL);
+	SDL_SetRenderVSync(rend, 1);
 	return (rend == NULL) ? -1 : 0;
 }
 
